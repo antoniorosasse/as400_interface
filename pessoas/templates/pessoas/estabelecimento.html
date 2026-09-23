@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Estabelecimentos do CEP {{ cep }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5><i class="fas fa-building"></i> Estabelecimentos - CEP {{ cep }}</h5>
+    </div>
+    <div class="card-body">
+        <pre style="white-space: pre-wrap; word-wrap: break-word; max-height: 500px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace;">{{ estabelecimento }}</pre>
+    </div>
+    <div class="card-footer">
+        <button onclick="window.close()" class="btn btn-secondary">
+            <i class="fas fa-times"></i> Fechar
+        </button>
+    </div>
+</div>
+{% endblock %}

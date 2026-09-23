@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}Buscar CEP{% endblock %}
+{% block content %}
+<h2><i class="fas fa-search"></i> Buscar CEP</h2>
+<p>Utilize os filtros para encontrar um CEP. Clique em "Selecionar" para preencher o formulário principal.</p>
+
+<!-- Filtros -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3" id="filtroForm">
+            <div class="col-md-3">
+                <label for="estado" class="form-label">Estado (UF)</label>
+                <input type="text" class="form-control" name="estado" id="estado"
+                       value="{{ estado }}" maxlength="2" placeholder="SP">
+            </div>
+            <div class="col-md-4">
+                <label for="cidade" class="form-label">Cidade</label>
+                <input type="text" class="form-control" name="cidade" id="cidade"
+                       value="{{ cidade }}" placeholder="Digite a cidade">
+            </div>
+            <div class="col-md-4">
+                <label for="logradouro" class="form-label">Logradouro</label>
+                <input type="text" class="form-control" name="logradouro" id="logradouro"
+                       value="{{ logradouro }}" placeholder="RUA ...">
+            </div>
+            <div class="col-md-1 d-flex align-items-end gap-2">
+                <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter"></i></button>
+                <a href="{% url 'lista_ceps' %}" class="btn btn-secondary w-100"><i class="fas fa-times"></i></a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Lista de CEPs -->
+<div class="table-responsive">
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>CEP</th>
+                <th>Logradouro</th>
+                <th>Bairro</th>
+                <th>Cidade</th>
+                <th>UF</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cep in ceps %}
+            <tr>
+                <td>{{ cep.cep }}</td>
+                <td>{{ cep.logradouro }}</td>
+                <td>{{ cep.localidade }}</td>
+                <td>{{ cep.nome_municipio }}</td>
+                <td>{{ cep.sigla_uf }}</td>
+                <td>
+                    <button type="button" class="btn btn-success btn-sm" onclick="selecionarCep('{{ cep.cep }}', '{{ cep.logradouro }}', '{{ cep.localidade }}', '{{ cep.nome_municipio }}', '{{ cep.sigla_uf }}')">
+                        <i class="fas fa-check"></i> Selecionar
+                    </button>
+                    <button type="button" class="btn btn-info btn-sm" onclick="abrirEstabelecimento('{{ cep.cep }}')">
+                        <i class="fas fa-building"></i> Estabelecimentos
+                    </button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center">Nenhum CEP encontrado.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Paginação -->
+<div class="d-flex justify-content-between align-items-center">
+    <div>Total: {{ total }} CEPs</div>
+    <nav>
+        <ul class="pagination">
+            {% if page > 1 %}
+            <li class="page-item"><a class="page-link" href="?page={{ page|add:-1 }}&estado={{ estado }}&cidade={{ cidade }}&logradouro={{ logradouro }}">Anterior</a></li>
+            {% endif %}
+            <li class="page-item active"><span class="page-link">{{ page }}</span></li>
+            {% if page < total_pages %}
+            <li class="page-item"><a class="page-link" href="?page={{ page|add:1 }}&estado={{ estado }}&cidade={{ cidade }}&logradouro={{ logradouro }}">Próxima</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+
+<script>
+function selecionarCep(cep, logradouro, localidade, cidade, uf) {
+    // Verifica se a janela pai existe
+    if (window.opener && !window.opener.closed) {
+        // Preenche os campos no formulário pai
+        const doc = window.opener.document;
+        const cepField = doc.getElementById('cep');
+        const enderecoField = doc.getElementById('endereco');
+        const bairroField = doc.getElementById('bairro');
+        const cidadeField = doc.getElementById('cidade');
+        const estadoField = doc.getElementById('estado');
+
+        if (cepField) cepField.value = cep;
+        if (enderecoField) enderecoField.value = logradouro;
+        if (bairroField) bairroField.value = localidade;
+        if (cidadeField) cidadeField.value = cidade;
+        if (estadoField) estadoField.value = uf;
+
+        // Fecha a janela atual
+        window.close();
+    } else {
+        // Fallback: redireciona com parâmetros
+        alert('Selecione o CEP e use o botão "Voltar" para preencher manualmente.');
+        window.location.href = "/pessoas/novo/?cep=" + cep + "&endereco=" + encodeURIComponent(logradouro) + "&bairro=" + encodeURIComponent(localidade) + "&cidade=" + encodeURIComponent(cidade) + "&estado=" + uf;
+    }
+}
+
+function abrirEstabelecimento(cep) {
+    // Abre em janela popup
+    window.open('/estabelecimento/' + cep + '/', '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+}
+
+// CORREÇÃO: Lógica de pesquisa melhorada
+document.addEventListener('DOMContentLoaded', function() {
+    const estadoInput = document.getElementById('estado');
+    const cidadeInput = document.getElementById('cidade');
+    const logradouroInput = document.getElementById('logradouro');
+    const filtroForm = document.getElementById('filtroForm');
+
+    // Quando o formulário for submetido, limpar campos conforme a lógica
+    filtroForm.addEventListener('submit', function(e) {
+        const estado = estadoInput.value.trim();
+        const cidade = cidadeInput.value.trim();
+        const logradouro = logradouroInput.value.trim();
+
+        // Se tiver estado, mas não tiver cidade, limpa cidade
+        if (estado && !cidade) {
+            cidadeInput.value = '';
+        }
+        
+        // Se tiver cidade, mas não tiver estado, mantém cidade (busca apenas por cidade)
+        // Se tiver logradouro e não tiver estado/cidade, mantém logradouro
+        // (não precisa limpar nada, a view já trata)
+    });
+
+    // Quando digitar no campo estado, limpar cidade automaticamente
+    estadoInput.addEventListener('input', function() {
+        if (this.value.trim()) {
+            // Se o usuário digitou algo no estado, limpa a cidade
+            cidadeInput.value = '';
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,456 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Chat Inteligente com IA{% endblock %}
+
+{% block content %}
+<style>
+    .chat-container {
+        max-height: 500px;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        background: #f8f9fa;
+        min-height: 300px;
+    }
+    .message-user {
+        background: #007bff;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 15px 15px 5px 15px;
+        margin: 5px 0;
+        max-width: 80%;
+        float: right;
+        clear: both;
+    }
+    .message-bot {
+        background: #e9ecef;
+        color: #333;
+        padding: 10px 15px;
+        border-radius: 15px 15px 15px 5px;
+        margin: 5px 0;
+        max-width: 80%;
+        float: left;
+        clear: both;
+    }
+    .message-bot strong {
+        color: #007bff;
+    }
+    .message-bot table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 10px 0;
+        font-size: 13px;
+    }
+    .message-bot th {
+        background: #007bff;
+        color: white;
+        padding: 6px 10px;
+        text-align: left;
+        border: 1px solid #dee2e6;
+    }
+    .message-bot td {
+        padding: 5px 10px;
+        border: 1px solid #dee2e6;
+    }
+    .message-bot tr:nth-child(even) {
+        background: #f8f9fa;
+    }
+    .message-bot tr:hover {
+        background: #e9ecef;
+    }
+    .message-bot .total-destaque {
+        background: #d4edda;
+        padding: 8px 12px;
+        border-radius: 4px;
+        margin: 10px 0;
+        font-weight: bold;
+        border-left: 4px solid #28a745;
+    }
+    .message-bot .resumo-card {
+        background: #f8f9fa;
+        border-left: 4px solid #007bff;
+        padding: 10px 15px;
+        margin: 10px 0;
+        border-radius: 4px;
+    }
+    .message-sql {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        padding: 8px 12px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+        margin: 5px 0;
+        max-width: 90%;
+        clear: both;
+        float: left;
+        word-break: break-all;
+    }
+    .message-sql strong {
+        color: #856404;
+    }
+    .message-system {
+        background: #d1ecf1;
+        border: 1px solid #bee5eb;
+        color: #0c5460;
+        padding: 10px 15px;
+        border-radius: 8px;
+        margin: 5px 0;
+        max-width: 80%;
+        float: left;
+        clear: both;
+        text-align: center;
+    }
+    .message-quantidade {
+        background: #e8f5e9;
+        border: 1px solid #4caf50;
+        color: #1b5e20;
+        padding: 8px 15px;
+        border-radius: 8px;
+        margin: 5px 0;
+        max-width: 80%;
+        float: left;
+        clear: both;
+        text-align: center;
+        font-weight: 500;
+    }
+    .clearfix {
+        clear: both;
+    }
+    .loading {
+        display: none;
+        text-align: center;
+        padding: 20px;
+    }
+    .loading .spinner-border {
+        width: 2rem;
+        height: 2rem;
+    }
+    .sugestao-badge {
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .sugestao-badge:hover {
+        background: #007bff !important;
+        color: white !important;
+        transform: scale(1.05);
+    }
+    .chat-header-info {
+        font-size: 14px;
+        color: #6c757d;
+    }
+    #chatContainer::-webkit-scrollbar {
+        width: 6px;
+    }
+    #chatContainer::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+    #chatContainer::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 3px;
+    }
+    #chatContainer::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+</style>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="fas fa-robot"></i> 
+            Chat Inteligente com IA (DeepSeek)
+            <small class="text-light ms-2">Pergunte sobre os dados do sistema</small>
+        </h5>
+        <span class="chat-header-info">
+            <i class="fas fa-brain"></i> IA com contexto
+        </span>
+    </div>
+    <div class="card-body">
+        <!-- Container do Chat -->
+        <div class="chat-container" id="chatContainer">
+            <div class="text-center text-muted py-5">
+                <i class="fas fa-comment-dots fa-3x mb-3"></i>
+                <p class="mb-1"><strong>Pergunte algo sobre os dados cadastrados</strong></p>
+                <p class="small">Ex: "Quantas pessoas estão ativas?" ou "Liste os clientes de São Paulo"</p>
+                <p class="small text-muted">
+                    <i class="fas fa-info-circle"></i> O chat mantém contexto da conversa.
+                    Pergunte algo e depois peça para "dividir por bairro" ou "agrupar por status".
+                </p>
+            </div>
+        </div>
+        
+        <!-- Loading -->
+        <div class="loading" id="loading">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+            <p class="mt-2 text-muted">Processando sua pergunta...</p>
+            <p class="small text-muted">Isso pode levar alguns segundos</p>
+        </div>
+        
+        <!-- Formulário -->
+        <form id="chatForm" class="mt-3">
+            {% csrf_token %}
+            <div class="input-group">
+                <input type="text" class="form-control" id="pergunta" 
+                       placeholder="Digite sua pergunta..." required>
+                <button type="submit" class="btn btn-primary" id="btnEnviar">
+                    <i class="fas fa-paper-plane"></i> Enviar
+                </button>
+                <button type="button" class="btn btn-outline-danger" onclick="limparConversa()" title="Limpar histórico da conversa">
+                    <i class="fas fa-broom"></i>
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="limparChat()" title="Limpar mensagens">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </div>
+            
+            <!-- Sugestões -->
+            <div class="mt-2 d-flex flex-wrap gap-1">
+                <small class="text-muted me-2 mt-1">
+                    <i class="fas fa-lightbulb"></i> Sugestões:
+                </small>
+                <span class="badge bg-light text-dark sugestao-badge" onclick="sugerir('Quantas pessoas estão ativas?')">
+                    Total de ativos
+                </span>
+                <span class="badge bg-light text-dark sugestao-badge" onclick="sugerir('Liste os 10 clientes mais recentes')">
+                    Últimos cadastros
+                </span>
+                <span class="badge bg-light text-dark sugestao-badge" onclick="sugerir('Mostre os clientes de São Paulo')">
+                    Clientes SP
+                </span>
+                <span class="badge bg-light text-dark sugestao-badge" onclick="sugerir('Quantos clientes estão inativos?')">
+                    Inativos
+                </span>
+                <span class="badge bg-light text-dark sugestao-badge" onclick="sugerir('Liste os clientes por cidade')">
+                    Agrupar por cidade
+                </span>
+            </div>
+            
+            <!-- Segunda linha de sugestões para testar contexto -->
+            <div class="mt-1 d-flex flex-wrap gap-1">
+                <small class="text-muted me-2 mt-1">
+                    <i class="fas fa-arrow-right"></i> Teste contexto:
+                </small>
+                <span class="badge bg-light text-dark sugestao-badge" onclick="sugerir('Mostre os clientes de São Paulo')">
+                    1️⃣ SP
+                </span>
+                <span class="badge bg-light text-dark sugestao-badge" onclick="sugerir('Agora divida por bairro')">
+                    2️⃣ Dividir por bairro
+                </span>
+                <span class="badge bg-light text-dark sugestao-badge" onclick="sugerir('E por status?')">
+                    3️⃣ E por status?
+                </span>
+            </div>
+        </form>
+    </div>
+    <div class="card-footer text-muted d-flex justify-content-between align-items-center">
+        <small>
+            <i class="fas fa-info-circle"></i> 
+            Este chat usa IA da DeepSeek com contexto de conversa.
+        </small>
+        <small>
+            <span id="conversaAtiva" class="badge bg-success">Contexto ativo</span>
+        </small>
+    </div>
+</div>
+
+<script>
+// ============================================================
+// VARIÁVEIS GLOBAIS
+// ============================================================
+let primeiraMensagem = true;
+
+// ============================================================
+// FUNÇÃO: Adicionar mensagem ao chat
+// ============================================================
+function adicionarMensagem(texto, tipo) {
+    const container = document.getElementById('chatContainer');
+    const div = document.createElement('div');
+    
+    // Remover placeholder se existir
+    const placeholder = container.querySelector('.text-center');
+    if (placeholder) {
+        placeholder.remove();
+    }
+    
+    if (tipo === 'user') {
+        div.className = 'message-user';
+        div.innerHTML = '<strong>👤 Você:</strong><br>' + texto;
+    } else if (tipo === 'sql') {
+        div.className = 'message-sql';
+        div.innerHTML = '<strong>📊 SQL executado:</strong><br><pre style="margin:5px 0 0 0; white-space:pre-wrap; word-break:break-all;">' + texto + '</pre>';
+    } else if (tipo === 'system') {
+        div.className = 'message-system';
+        div.innerHTML = 'ℹ️ ' + texto;
+    } else if (tipo === 'quantidade') {
+        div.className = 'message-quantidade';
+        div.innerHTML = '📊 ' + texto;
+    } else {
+        div.className = 'message-bot';
+        // Quebrar linhas
+        const textoFormatado = texto.replace(/\n/g, '<br>');
+        div.innerHTML = '<strong>🤖 IA:</strong><br>' + textoFormatado;
+    }
+    
+    container.appendChild(div);
+    
+    // Rolar para o final
+    container.scrollTop = container.scrollHeight;
+}
+
+// ============================================================
+// FUNÇÃO: Enviar pergunta
+// ============================================================
+function enviarPergunta() {
+    const perguntaInput = document.getElementById('pergunta');
+    const pergunta = perguntaInput.value.trim();
+    
+    if (!pergunta) return;
+    
+    // Adicionar mensagem do usuário
+    adicionarMensagem(pergunta, 'user');
+    perguntaInput.value = '';
+    perguntaInput.focus();
+    
+    // Mostrar loading
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('btnEnviar').disabled = true;
+    
+    // Enviar para o servidor
+    fetch('/chat-pessoas/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: 'pergunta=' + encodeURIComponent(pergunta)
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('btnEnviar').disabled = false;
+        
+        if (data.success) {
+            // Mostrar SQL APENAS UMA VEZ (se houver)
+            if (data.sql) {
+                adicionarMensagem(data.sql, 'sql');
+            }
+            // Mostrar quantidade de registros
+            if (data.quantidade !== undefined) {
+                adicionarMensagem('Encontrados ' + data.quantidade + ' registro(s)', 'quantidade');
+            }
+            // Mostrar resposta da IA (sem SQL, pois já foi mostrado)
+            adicionarMensagem(data.resposta, 'bot');
+            
+            // Atualizar indicador de contexto
+            if (data.contexto && Object.keys(data.contexto).length > 0) {
+                document.getElementById('conversaAtiva').textContent = 'Contexto: ' + Object.keys(data.contexto).join(', ');
+                document.getElementById('conversaAtiva').className = 'badge bg-success';
+            }
+        } else {
+            adicionarMensagem('❌ ' + (data.erro || 'Erro ao processar sua pergunta.'), 'bot');
+        }
+        
+        // Rolar para o final
+        const container = document.getElementById('chatContainer');
+        container.scrollTop = container.scrollHeight;
+    })
+    .catch(error => {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('btnEnviar').disabled = false;
+        adicionarMensagem('❌ Erro de conexão: ' + error.message, 'bot');
+    });
+}
+
+// ============================================================
+// FUNÇÃO: Limpar conversa (contexto + histórico)
+// ============================================================
+function limparConversa() {
+    if (!confirm('Limpar o histórico da conversa? Isso vai resetar o contexto.')) return;
+    
+    fetch('/chat-pessoas/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: 'acao=limpar'
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            adicionarMensagem('🧹 ' + data.resposta, 'system');
+            document.getElementById('conversaAtiva').textContent = 'Contexto limpo';
+            document.getElementById('conversaAtiva').className = 'badge bg-secondary';
+            const container = document.getElementById('chatContainer');
+            container.scrollTop = container.scrollHeight;
+        }
+    });
+}
+
+// ============================================================
+// FUNÇÃO: Limpar mensagens (apenas visual)
+// ============================================================
+function limparChat() {
+    if (!confirm('Limpar todas as mensagens?')) return;
+    const container = document.getElementById('chatContainer');
+    container.innerHTML = `
+        <div class="text-center text-muted py-5">
+            <i class="fas fa-comment-dots fa-3x mb-3"></i>
+            <p class="mb-1"><strong>Conversa limpa!</strong></p>
+            <p class="small">Faça uma nova pergunta para começar</p>
+        </div>
+    `;
+    document.getElementById('conversaAtiva').textContent = 'Contexto ativo';
+    document.getElementById('conversaAtiva').className = 'badge bg-success';
+}
+
+// ============================================================
+// FUNÇÃO: Sugerir pergunta
+// ============================================================
+function sugerir(pergunta) {
+    document.getElementById('pergunta').value = pergunta;
+    document.getElementById('pergunta').focus();
+    enviarPergunta();
+}
+
+// ============================================================
+// EVENTOS
+// ============================================================
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('chatForm');
+    const perguntaInput = document.getElementById('pergunta');
+    
+    // Enviar ao submeter o formulário
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        enviarPergunta();
+    });
+    
+    // Permitir enviar com Enter
+    perguntaInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            enviarPergunta();
+        }
+    });
+    
+    // Foco inicial no campo
+    perguntaInput.focus();
+});
+
+// ============================================================
+// FUNÇÃO: Enviar com Ctrl+Enter
+// ============================================================
+document.getElementById('pergunta').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && e.ctrlKey) {
+        e.preventDefault();
+        enviarPergunta();
+    }
+});
+</script>
+{% endblock %}

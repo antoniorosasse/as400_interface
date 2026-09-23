@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}{% if edicao %}Editar{% else %}Nova{% endif %} Pessoa{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas {% if edicao %}fa-edit{% else %}fa-plus-circle{% endif %}"></i> {% if edicao %}Editar{% else %}Nova{% endif %} Pessoa</h5>
+            </div>
+            <div class="card-body">
+                {% if erro %}
+                    <div class="alert alert-danger">{{ erro }}</div>
+                {% endif %}
+                <form method="post" id="pessoaForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ next_url|default:'' }}">
+                    <div class="row g-3">
+                        <!-- CPF -->
+                        <div class="col-md-6">
+                            <label for="cpf" class="form-label">CPF *</label>
+                            <input type="text" class="form-control" name="cpf" id="cpf"
+                                   value="{{ pessoa.cpf }}" required maxlength="11"
+                                   pattern="\d{11}" title="Apenas 11 dígitos numéricos"
+                                   placeholder="Apenas números">
+                        </div>
+                        <!-- Nome Completo -->
+                        <div class="col-md-6">
+                            <label for="nomecompl" class="form-label">Nome Completo *</label>
+                            <input type="text" class="form-control" name="nomecompl" id="nomecompl"
+                                   value="{{ pessoa.nomecompl }}" required>
+                        </div>
+                        <!-- Email -->
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" name="email" id="email"
+                                   value="{{ pessoa.email }}" placeholder="exemplo@dominio.com">
+                        </div>
+                        <!-- Telefone -->
+                        <div class="col-md-6">
+                            <label for="telefone" class="form-label">Telefone *</label>
+                            <input type="text" class="form-control" name="telefone" id="telefone"
+                                   value="{{ pessoa.telefone }}" required maxlength="15"
+                                   pattern="\d*" title="Apenas números" placeholder="Apenas números (até 15 dígitos)">
+                        </div>
+                        <!-- Data Nascimento -->
+                        <div class="col-md-6">
+                            <label for="data_nasc" class="form-label">Data de Nascimento *</label>
+                            <input type="date" class="form-control" name="data_nasc" id="data_nasc"
+                                   value="{{ pessoa.data_nasc }}" required>
+                        </div>
+                        <!-- Status -->
+                        <div class="col-md-6">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" name="status" id="status">
+                                <option value="A" {% if pessoa.status == 'A' %}selected{% endif %}>Ativo</option>
+                                <option value="I" {% if pessoa.status == 'I' %}selected{% endif %}>Inativo</option>
+                            </select>
+                        </div>
+                        <!-- CEP (com botão de busca) -->
+                        <div class="col-md-6">
+                            <label for="cep" class="form-label">CEP *</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" name="cep" id="cep"
+                                       value="{{ pessoa.cep }}" required maxlength="8"
+                                       pattern="\d*" title="Apenas números" placeholder="Apenas números (8 dígitos)">
+                                <button type="button" class="btn btn-outline-secondary" onclick="abrirBuscaCep()" title="Buscar CEP por estado/cidade">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Estado (readonly) -->
+                        <div class="col-md-6">
+                            <label for="estado" class="form-label">Estado (UF)</label>
+                            <input type="text" class="form-control" name="estado" id="estado"
+                                   value="{{ pessoa.estado }}" maxlength="2" readonly
+                                   placeholder="Preenchido automático">
+                        </div>
+                        <!-- Cidade (readonly) -->
+                        <div class="col-md-6">
+                            <label for="cidade" class="form-label">Cidade</label>
+                            <input type="text" class="form-control" name="cidade" id="cidade"
+                                   value="{{ pessoa.cidade }}" maxlength="50" readonly
+                                   placeholder="Preenchido automático">
+                        </div>
+                        <!-- Bairro (readonly) -->
+                        <div class="col-md-6">
+                            <label for="bairro" class="form-label">Bairro</label>
+                            <input type="text" class="form-control" name="bairro" id="bairro"
+                                   value="{{ pessoa.bairro }}" maxlength="50" readonly
+                                   placeholder="Preenchido automático">
+                        </div>
+                        <!-- Endereço (editável) -->
+                        <div class="col-md-6">
+                            <label for="endereco" class="form-label">Endereço</label>
+                            <input type="text" class="form-control" name="endereco" id="endereco"
+                                   value="{{ pessoa.endereco }}" maxlength="100" placeholder="Preenchido automático ou digite manualmente">
+                        </div>
+                        <!-- Número (obrigatório) -->
+                        <div class="col-md-6">
+                            <label for="numero" class="form-label">Número *</label>
+                            <input type="text" class="form-control" name="numero" id="numero"
+                                   value="{{ pessoa.numero }}" maxlength="10" required>
+                        </div>
+                        <!-- Complemento -->
+                        <div class="col-md-6">
+                            <label for="complemento" class="form-label">Complemento</label>
+                            <input type="text" class="form-control" name="complemento" id="complemento"
+                                   value="{{ pessoa.complemento }}" maxlength="50">
+                        </div>
+                        <!-- Botões -->
+                        <div class="col-12 mt-4">
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Salvar</button>
+                            <a href="{% if next_url %}{{ next_url }}{% elif edicao %}{% url 'detalhe_pessoa' pessoa.id_pessoa %}{% else %}{% url 'home' %}{% endif %}" class="btn btn-secondary">Cancelar</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript apenas para abrir a janela de busca de CEP -->
+<script>
+function abrirBuscaCep() {
+    const estadoInput = document.getElementById('estado');
+    const estado = estadoInput ? estadoInput.value : '';
+    let url = "{% url 'lista_ceps' %}";
+    if (estado) {
+        url += '?estado=' + encodeURIComponent(estado);
+    }
+    window.open(url, '_blank', 'width=900,height=600,scrollbars=yes,resizable=yes');
+}
+</script>
+{% endblock %}

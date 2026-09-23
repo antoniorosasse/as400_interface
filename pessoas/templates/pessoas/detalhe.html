@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Detalhes da Pessoa{% endblock %}
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-user"></i> Detalhes da Pessoa</h5>
+        <div>
+            <a href="{% url 'editar_pessoa' pessoa.id_pessoa %}" class="btn btn-warning btn-sm text-dark"><i class="fas fa-edit"></i> Editar</a>
+            <a href="{% url 'excluir_pessoa' pessoa.id_pessoa %}" class="btn btn-danger btn-sm"><i class="fas fa-trash-alt"></i> Excluir</a>
+        </div>
+    </div>
+    <div class="card-body">
+        <table class="table table-bordered">
+            <tbody>
+                <tr><th>ID</th><td>{{ pessoa.id_pessoa }}</td></tr>
+                <tr><th>CPF</th><td>{{ pessoa.cpf }}</td></tr>
+                <tr><th>Nome Completo</th><td>{{ pessoa.nomecompl }}</td></tr>
+                <tr><th>Email</th><td>{{ pessoa.email|default:"-" }}</td></tr>
+                <tr><th>Telefone</th><td>{{ pessoa.telefone|default:"-" }}</td></tr>
+                <tr><th>Data de Nascimento</th><td>{{ pessoa.data_nasc|date:"d/m/Y"|default:"-" }}</td></tr>
+                <tr><th>Status</th><td>{% if pessoa.status == 'A' %}<span class="badge bg-success">Ativo</span>{% elif pessoa.status == 'I' %}<span class="badge bg-danger">Inativo</span>{% else %}{{ pessoa.status }}{% endif %}</td></tr>
+                <tr><th>CEP</th><td>{{ pessoa.cep|default:"-" }}</td></tr>
+                <tr><th>Estado</th><td>{{ pessoa.estado|default:"-" }}</td></tr>
+                <tr><th>Cidade</th><td>{{ pessoa.cidade|default:"-" }}</td></tr>
+                <tr><th>Bairro</th><td>{{ pessoa.bairro|default:"-" }}</td></tr>
+                <tr><th>Endereço</th><td>{{ pessoa.endereco|default:"-" }}</td></tr>
+                <tr><th>Número</th><td>{{ pessoa.numero|default:"-" }}</td></tr>
+                <tr><th>Complemento</th><td>{{ pessoa.complemento|default:"-" }}</td></tr>
+                <tr><th>Data de Cadastro</th><td>{{ pessoa.datacadast|date:"d/m/Y H:i"|default:"-" }}</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer">
+        <a href="{% url 'home' %}" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Voltar</a>
+    </div>
+</div>
+{% endblock %}
