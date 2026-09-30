@@ -1,12 +1,16 @@
+import os
 import jpype
 import jpype.imports
+from dotenv import load_dotenv
+
+load_dotenv()
 
 jar_path = "/home/neto/IBM/as400_interface/lib/jt400.jar"
 
-host = "pub400.com"
-user = "AROSASSE"
-password = "REDACTED"
-library = "AROSASSE1"
+host = os.getenv('AS400_HOST')
+user = os.getenv('AS400_USER')
+password = os.getenv('AS400_PASSWORD')
+library = os.getenv('AS400_LIBRARY')
 jdbc_url = f"jdbc:as400://{host};libraries={library};naming=sql"
 
 try:

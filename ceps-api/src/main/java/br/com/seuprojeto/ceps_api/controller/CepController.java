@@ -27,7 +27,7 @@ public class CepController {
     public ResponseEntity<?> getCeps() {
         String host = "pub400.com";
         String user = "AROSASSE";
-        String password = "REDACTED";
+        String password = System.getenv("AS400_PASSWORD");
         String library = "AROSASSE1";
         String url = "jdbc:as400://" + host + ";libraries=" + library + ";naming=sql";
 
@@ -71,7 +71,7 @@ public class CepController {
 
         String host = "pub400.com";
         String user = "AROSASSE";
-        String password = "REDACTED";
+        String password = System.getenv("AS400_PASSWORD");
         String library = "AROSASSE1";
         String url = "jdbc:as400://" + host + ";libraries=" + library + ";naming=sql";
 
@@ -158,7 +158,7 @@ public class CepController {
     public ResponseEntity<byte[]> exportCsv(@RequestParam(required = false) String cidade) throws SQLException {
         String host = "pub400.com";
         String user = "AROSASSE";
-        String password = "REDACTED";
+        String password = System.getenv("AS400_PASSWORD");
         String library = "AROSASSE1";
         String url = "jdbc:as400://" + host + ";libraries=" + library + ";naming=sql";
 

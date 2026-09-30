@@ -1,5 +1,9 @@
 # Conexão com o IBM i (AS400) usando pyodbc
+import os
 import pyodbc
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # 1. Descubra o nome exato do seu driver ODBC
 drivers = pyodbc.drivers()
@@ -7,14 +11,13 @@ print("Drivers ODBC disponíveis:")
 for d in drivers:
     print(f" - {d}")
 
-# 2. Configure a string de conexão
-# Substitua os valores entre colchetes pelos seus dados
+# 2. Configure a string de conexão (le do .env)
 conn_str = (
-    "DRIVER={IBM i Access ODBC Driver};"  # Ou "IBM i Access ODBC Driver 64-bit" [reference:1]
-    "SYSTEM=pub400.com;"        # Ex: 192.168.1.100
-    "UID=arosasse;"
-    "PWD=REDACTED;"
-    "DATABASE=arosasse1;"            # Opcional, se necessário
+    "DRIVER={IBM i Access ODBC Driver};"
+    f"SYSTEM={os.getenv('AS400_HOST')};"
+    f"UID={os.getenv('AS400_USER')};"
+    f"PWD={os.getenv('AS400_PASSWORD')};"
+    f"DATABASE={os.getenv('AS400_LIBRARY')};"
 )
 
 try:

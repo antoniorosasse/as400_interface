@@ -1,15 +1,18 @@
 import jaydebeapi
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Caminho para o seu arquivo jt400.jar
 # Ajuste o caminho para onde você colocou o arquivo
 jar_path = "/home/neto/IBM/as400_interface/lib/jt400.jar"
 
-# Credenciais e informações de conexão
-host = "pub400.com"
-user = "AROSASSE"
-password = "REDACTED"
-library = "AROSASSE1"
+# Credenciais e informações de conexão (le do .env)
+host = os.getenv('AS400_HOST')
+user = os.getenv('AS400_USER')
+password = os.getenv('AS400_PASSWORD')
+library = os.getenv('AS400_LIBRARY')
 
 # URL de conexão JDBC para o AS/400
 # O parâmetro 'libraries' define a biblioteca padrão, igual ao seu código Java
