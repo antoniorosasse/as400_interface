@@ -44,4 +44,5 @@ urlpatterns = [
     path('chat-pessoas/', chat_pessoas, name='chat_pessoas'),
     path('testar-deepseek/', testar_deepseek, name='testar_deepseek'),
     path('health/', lambda r: HttpResponse('ok'), name='health'),
+    path('health/deep/', views.health_deep, name='health_deep'),
 ]

@@ -19,7 +19,11 @@ from django.core.exceptions import ValidationError
 from .validators import validar_cep_existe
 from django.http import JsonResponse
 from .ceps import buscar_cep
+import json
+import time
+import logging
 
+logger = logging.getLogger(__name__)
 
 
 # ==================== GERADOR ====================
@@ -1047,6 +1051,65 @@ def testar_deepseek(request):
             'chave_configurada': bool(settings.DEEPSEEK_API_KEY)
         })
 
+def health_deep(request):
+    """
+    Health check profundo: testa conexao real com o AS/400.
+
+    Devolve JSON:
+      {"status": "ok", "db": "as400", "ms": 123}
+      {"status": "error", "db": "as400", "erro": "..."}
+
+    Sempre HTTP 200 (o menu le o JSON, nao o HTTP code).
+    """
+    from django.http import JsonResponse
+    from .as400_conn import get_connection
+    import jpype
+
+    inicio = time.monotonic()
+    try:
+        # Tenta conectar com timeout curto (3s)
+        if not jpype.isJVMStarted():
+            # Inicia a JVM (sem timeout aqui - e' rapido)
+            from .as400_conn import iniciar_jvm
+            iniciar_jvm()
+
+        # Agora conecta. Aplica timeout via DriverManager.setLoginTimeout.
+        DriverManager = jpype.JClass("java.sql.DriverManager")
+        DriverManager.setLoginTimeout(3)  # 3 segundos
+
+        from django.conf import settings
+        host = settings.AS400_HOST
+        user = settings.AS400_USER
+        password = settings.AS400_PASSWORD
+        library = settings.AS400_LIBRARY
+        jdbc_url = f"jdbc:as400://{host};libraries={library};naming=sql;loginTimeout=3;socketTimeout=3000"
+
+        conn = DriverManager.getConnection(jdbc_url, user, password)
+
+        try:
+            stmt = conn.createStatement()
+            rs = stmt.executeQuery("SELECT 1 FROM SYSIBM.SYSDUMMY1")
+            rs.next()
+            rs.close()
+            stmt.close()
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+        ms = int((time.monotonic() - inicio) * 1000)
+        return JsonResponse({'status': 'ok', 'db': 'as400', 'ms': ms})
+
+    except Exception as exc:
+        ms = int((time.monotonic() - inicio) * 1000)
+        logger.warning('Health deep as400 falhou: %s', exc)
+        return JsonResponse({
+            'status': 'error',
+            'db': 'as400',
+            'erro': str(exc)[:200],
+            'ms': ms,
+        })
     
 #fim = time.time()
 # print(f"Tempo total: {fim - inicio:.2f}s")
