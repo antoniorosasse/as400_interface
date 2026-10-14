@@ -1055,6 +1055,10 @@ def health_deep(request):
     """
     Health check profundo: testa conexao real com o AS/400.
 
+    Usa o pool (pessoas.pool) em vez de abrir conexao nova a cada chamada.
+    O pool ja valida a conexao antes de entregar (isValid), entao aqui
+    basta pegar a conexao e rodar um SELECT 1.
+
     Devolve JSON:
       {"status": "ok", "db": "as400", "ms": 123}
       {"status": "error", "db": "as400", "erro": "..."}
@@ -1062,41 +1066,18 @@ def health_deep(request):
     Sempre HTTP 200 (o menu le o JSON, nao o HTTP code).
     """
     from django.http import JsonResponse
-    from .as400_conn import get_connection
-    import jpype
+    from .pool import pool
 
     inicio = time.monotonic()
+    conn = None
     try:
-        # Tenta conectar com timeout curto (3s)
-        if not jpype.isJVMStarted():
-            # Inicia a JVM (sem timeout aqui - e' rapido)
-            from .as400_conn import iniciar_jvm
-            iniciar_jvm()
+        conn = pool.get_connection()
 
-        # Agora conecta. Aplica timeout via DriverManager.setLoginTimeout.
-        DriverManager = jpype.JClass("java.sql.DriverManager")
-        DriverManager.setLoginTimeout(3)  # 3 segundos
-
-        from django.conf import settings
-        host = settings.AS400_HOST
-        user = settings.AS400_USER
-        password = settings.AS400_PASSWORD
-        library = settings.AS400_LIBRARY
-        jdbc_url = f"jdbc:as400://{host};libraries={library};naming=sql;loginTimeout=3;socketTimeout=3000"
-
-        conn = DriverManager.getConnection(jdbc_url, user, password)
-
-        try:
-            stmt = conn.createStatement()
-            rs = stmt.executeQuery("SELECT 1 FROM SYSIBM.SYSDUMMY1")
-            rs.next()
-            rs.close()
-            stmt.close()
-        finally:
-            try:
-                conn.close()
-            except Exception:
-                pass
+        stmt = conn.createStatement()
+        rs = stmt.executeQuery("SELECT 1 FROM SYSIBM.SYSDUMMY1")
+        rs.next()
+        rs.close()
+        stmt.close()
 
         ms = int((time.monotonic() - inicio) * 1000)
         return JsonResponse({'status': 'ok', 'db': 'as400', 'ms': ms})
