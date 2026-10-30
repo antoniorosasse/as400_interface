@@ -550,6 +550,9 @@ def editar_pessoa(request, id_pessoa):
     try:
         conn = pool.get_connection()
         if request.method == 'POST':
+            # Injeta id_pessoa no POST para o link "Cancelar" do form (evita NoReverseMatch)
+            request.POST = request.POST.copy()
+            request.POST['id_pessoa'] = str(id_pessoa)
             cpf = request.POST.get('cpf', '').strip()
             nomecompl = request.POST.get('nomecompl', '').strip()
             email = request.POST.get('email', '').strip()
