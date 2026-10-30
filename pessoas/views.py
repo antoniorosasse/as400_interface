@@ -22,8 +22,14 @@ from .ceps import buscar_cep
 import json
 import time
 import logging
+import unicodedata
 
 logger = logging.getLogger(__name__)
+
+
+def sem_acentos(texto):
+    """Remove acentos (ex.: 'Itajaí' -> 'Itajai')."""
+    return ''.join(c for c in unicodedata.normalize('NFKD', texto) if not unicodedata.combining(c))
 
 
 # ==================== GERADOR ====================
@@ -812,8 +818,8 @@ def lista_ceps(request):
 
     # Parâmetros de filtro
     estado = request.GET.get('estado', '').strip().upper()
-    cidade = request.GET.get('cidade', '').strip().upper()
-    logradouro = request.GET.get('logradouro', '').strip().upper()
+    cidade = sem_acentos(request.GET.get('cidade', '').strip().upper())
+    logradouro = sem_acentos(request.GET.get('logradouro', '').strip().upper())
     page = int(request.GET.get('page', 1))
     size = int(request.GET.get('size', 20))
     if size > 100:
@@ -828,10 +834,10 @@ def lista_ceps(request):
             where_parts.append("SIGLA_UF = ?")
             params.append(estado)
         if cidade:
-            where_parts.append("UPPER(NOME_MUNICIPIO) LIKE ?")
+            where_parts.append("TRANSLATE(UPPER(NOME_MUNICIPIO), 'AAAAAEEEIIOOOOUUCN', 'ÁÀÂÃÄÉÊËÍÏÓÔÕÖÚÜÇÑ') LIKE ?")
             params.append(f"%{cidade}%")
         if logradouro:
-            where_parts.append("UPPER(LOGRADOURO) LIKE ?")
+            where_parts.append("TRANSLATE(UPPER(LOGRADOURO), 'AAAAAEEEIIOOOOUUCN', 'ÁÀÂÃÄÉÊËÍÏÓÔÕÖÚÜÇÑ') LIKE ?")
             params.append(f"%{logradouro}%")
         where_clause = " WHERE " + " AND ".join(where_parts) if where_parts else ""
 
