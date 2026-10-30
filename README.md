@@ -108,7 +108,7 @@ Para rodar, voce precisa:
    versionado — a tabela existia no ambiente original e precisa ser
    recriada manualmente (colunas: `ID_PESSOA`, `CPF`, `NOMECOMPL`,
    `EMAIL`, `TELEFONE`, `DATA_NASC`, `STATUS`, `CEP`, `ESTADO`,
-   `CIDADE`, `BAIRRO`, `ENDERECO`, `NUMERO`, `COMPL00001`,
+   `CIDADE`, `BAIRRO`, `ENDERECO`, `NUMERO`, `COMPLEMENTO`,
    `DATACADAST`).
 4. Baixar o `lib/jt400.jar` (nao versionado — ver `lib/README.md`).
 

@@ -131,7 +131,7 @@ def gerar_sql_com_contexto(pergunta, contexto, historico):
     - BAIRRO (VARCHAR(50)) - Bairro
     - ENDERECO (VARCHAR(100)) - Endereço
     - NUMERO (VARCHAR(10)) - Número
-    - COMPL00001 (VARCHAR(50)) - Complemento
+    - COMPLEMENTO (VARCHAR(50)) - Complemento
     - DATACADAST (TIMESTAMP) - Data de cadastro
 
     2. AROSASSE1.CEPSGEN - Tabela de CEPs com informações de endereço
@@ -308,7 +308,7 @@ def gerar_sql(pergunta):
         - BAIRRO (VARCHAR(50)) - Bairro
         - ENDERECO (VARCHAR(100)) - Endereço
         - NUMERO (VARCHAR(10)) - Número
-        - COMPL00001 (VARCHAR(50)) - Complemento
+        - COMPLEMENTO (VARCHAR(50)) - Complemento
         - DATACADAST (TIMESTAMP) - Data de cadastro
 
         REGRAS IMPORTANTES:
@@ -459,7 +459,7 @@ def processar_pergunta_direta(pergunta_usuario):
         
         1. AROSASSE1.PESSOAS com campos:
         ID_PESSOA, CPF, NOMECOMPL, EMAIL, TELEFONE, DATA_NASC, STATUS, 
-        CEP, ESTADO, CIDADE, BAIRRO, ENDERECO, NUMERO, COMPL00001, DATACADAST
+        CEP, ESTADO, CIDADE, BAIRRO, ENDERECO, NUMERO, COMPLEMENTO, DATACADAST
         
         2. AROSASSE1.CEPSGEN com campos:
         CEP, LOGRADOURO, LOCALIDADE, ID_MU00001, NOME_00001, SIGLA_UF, ESTAB00001, CENTROIDE

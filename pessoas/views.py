@@ -505,7 +505,7 @@ def criar_pessoa(request):
 
             sql = """INSERT INTO AROSASSE1.PESSOAS 
                      (CPF, NOMECOMPL, EMAIL, TELEFONE, DATA_NASC, STATUS, CEP, ESTADO, 
-                      CIDADE, BAIRRO, ENDERECO, NUMERO, COMPL00001)
+                      CIDADE, BAIRRO, ENDERECO, NUMERO, COMPLEMENTO)
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"""
             pstmt = conn.prepareStatement(sql)
 
@@ -659,7 +659,7 @@ def editar_pessoa(request, id_pessoa):
             # ----- UPDATE -----
             sql = """UPDATE AROSASSE1.PESSOAS 
                      SET CPF=?, NOMECOMPL=?, EMAIL=?, TELEFONE=?, DATA_NASC=?, STATUS=?, 
-                         CEP=?, ESTADO=?, CIDADE=?, BAIRRO=?, ENDERECO=?, NUMERO=?, COMPL00001=?
+                         CEP=?, ESTADO=?, CIDADE=?, BAIRRO=?, ENDERECO=?, NUMERO=?, COMPLEMENTO=?
                      WHERE ID_PESSOA=?"""
             pstmt = conn.prepareStatement(sql)
             pstmt.setString(1, cpf)
