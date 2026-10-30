@@ -238,10 +238,20 @@
         {% endif %}
     </div>
     <nav aria-label="Paginação">
-        <ul class="pagination mb-0">
+        <ul class="pagination mb-0 flex-wrap">
+            <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                {% if page > 1 %}
+                <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' and key != 'ultimo_id' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}page=1" title="Primeira página">
+                    <i class="fas fa-angle-double-left"></i> Primeira
+                </a>
+                {% else %}
+                <span class="page-link" title="Primeira página"><i class="fas fa-angle-double-left"></i> Primeira</span>
+                {% endif %}
+            </li>
+
             {% if page > 1 %}
             <li class="page-item">
-                <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' and key != 'ultimo_id' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}page={{ page|add:'-1' }}&ultimo_id={{ ultimo_id }}">
+                <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' and key != 'ultimo_id' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}page={{ page|add:'-1' }}">
                     <i class="fas fa-angle-left"></i> Anterior
                 </a>
             </li>
@@ -266,6 +276,16 @@
                 <span class="page-link">Próxima <i class="fas fa-angle-right"></i></span>
             </li>
             {% endif %}
+
+            <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                {% if page < total_pages %}
+                <a class="page-link" href="?{% for key, value in request.GET.items %}{% if key != 'page' and key != 'ultimo_id' %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}page={{ total_pages }}" title="Última página">
+                    Última <i class="fas fa-angle-double-right"></i>
+                </a>
+                {% else %}
+                <span class="page-link" title="Última página">Última <i class="fas fa-angle-double-right"></i></span>
+                {% endif %}
+            </li>
         </ul>
     </nav>
 </div>

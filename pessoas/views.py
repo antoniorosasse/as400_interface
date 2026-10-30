@@ -216,7 +216,15 @@ def pessoas_paginadas(request):
             cache.set(cache_key, total, 60 * 5)
 
         # ---------- DECISÃO: KEYSET OU OFFSET ----------
-        usar_keyset = (not nome) and (ordering == 'id_pessoa')
+        # Keyset só é usado na navegação sequencial (botão "Próxima"), que é a
+        # única que carrega "ultimo_id". Saltos diretos (Primeira/Última/Anterior)
+        # usam OFFSET por número de página, permitindo qualquer ordenação.
+        usar_keyset = (
+            (not nome)
+            and (ordering == 'id_pessoa')
+            and (order == 'asc')
+            and ultimo_id > 0
+        )
 
         if usar_keyset:
             # Monta a cláusula keyset corretamente
