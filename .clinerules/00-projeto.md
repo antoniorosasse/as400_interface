@@ -69,9 +69,12 @@ neste workspace. Mantenha-o enxuto e versionado no git.
 
 - CSV: sempre `csv.writer` (quoting obrigatorio — enderecos tem virgula),
   `lineterminator='\n'`, utf-8 **no gerador** (`csv_bytes()`) porque
-  `StreamingHttpResponse` no Django 6.0 recebe `Iterable[bytes]`. Fechar
-  `rs`/`pstmt` em `try/finally` (pendencia aberta: download abortado deixa o
-  cursor preso e aparece `Cursor state not valid`).
+  `StreamingHttpResponse` no Django 6.0 recebe `Iterable[bytes]`. `rs`/`pstmt`
+  fecham em `finally` (`_fechar_recursos`) — inclusive quando o download e
+  abortado, senao o cursor preso na conexao unica vira `Cursor state not valid`
+  (fechado em 31/10; coberto por `test_download_abortado_*` e
+  `test_erro_na_query_principal_*`).
+
 - `exibir_estabelecimento` existe **uma vez so** (a duplicata foi removida em
   31/10); nao reintroduzir helpers duplicados em `views.py`.
 - Testes novos de view/CSV devem usar dubles de `Connection`/
