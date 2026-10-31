@@ -304,51 +304,78 @@ def pessoas_paginadas(request):
         return render(request, 'pessoas/erro.html', {'erro': str(e)})
 
 # ==================== EXPORTAÇÃO CSV ====================
+def _fechar_recursos(*recursos):
+    """Fecha ResultSet/Statement do JDBC ignorando None e erros de close.
+
+    Existe para ser chamado em `finally`: se o cliente abortar o download o
+    gerador recebe GeneratorExit e os recursos precisam ser liberados mesmo
+    assim (a conexao do pool e unica; cursor preso = "Cursor state not valid").
+    """
+    for recurso in recursos:
+        if recurso is None:
+            continue
+        try:
+            recurso.close()
+        except Exception:
+            pass
+
+
 def exportar_csv(request):
     nome = request.GET.get('nome', '').strip()
     try:
         conn = pool.get_connection()
-        
+
         # Primeiro, contar total para log
         count_sql = "SELECT COUNT(*) FROM AROSASSE1.PESSOAS" + (" WHERE UPPER(NOMECOMPL) LIKE ?" if nome else "")
         pstmt_count = conn.prepareStatement(count_sql)
-        if nome:
-            pstmt_count.setString(1, f"%{nome.upper()}%")
-        rs_count = pstmt_count.executeQuery()
-        rs_count.next()
-        total = rs_count.getInt(1)
-        rs_count.close()
-        pstmt_count.close()
+        rs_count = None
+        try:
+            if nome:
+                pstmt_count.setString(1, f"%{nome.upper()}%")
+            rs_count = pstmt_count.executeQuery()
+            rs_count.next()
+            total = rs_count.getInt(1)
+        finally:
+            _fechar_recursos(rs_count, pstmt_count)
         print(f"📊 Exportando CSV com {total} registros...")
 
         # Query principal
         sql = "SELECT * FROM AROSASSE1.PESSOAS" + (" WHERE UPPER(NOMECOMPL) LIKE ? ORDER BY ID_PESSOA" if nome else " ORDER BY ID_PESSOA")
         pstmt = conn.prepareStatement(sql)
-        pstmt.setFetchSize(2000)  # Busca 500 linhas por vez
-        if nome:
-            pstmt.setString(1, f"%{nome.upper()}%")
-        rs = pstmt.executeQuery()
+        rs = None
+        try:
+            pstmt.setFetchSize(2000)  # Busca 2000 linhas por vez
+            if nome:
+                pstmt.setString(1, f"%{nome.upper()}%")
+            rs = pstmt.executeQuery()
+        except Exception:
+            # Statement aberto sem ResultSet tambem prende cursor
+            _fechar_recursos(rs, pstmt)
+            raise
 
         # Gerador de linhas CSV (streaming)
         def csv_generator():
-            meta = rs.getMetaData()
-            num_colunas = meta.getColumnCount()
-            cabecalho = [str(meta.getColumnLabel(i + 1)) for i in range(num_colunas)]
-            yield cabecalho
+            try:
+                meta = rs.getMetaData()
+                num_colunas = meta.getColumnCount()
+                cabecalho = [str(meta.getColumnLabel(i + 1)) for i in range(num_colunas)]
+                yield cabecalho
 
-            count = 0
-            while rs.next():
-                linha = []
-                for i in range(1, num_colunas + 1):
-                    valor = rs.getString(i)
-                    linha.append(str(valor) if valor is not None else "")
-                yield linha
-                count += 1
-                if count % 50000 == 0:
-                    print(f"   Exportadas {count} linhas...")
-            print(f"✅ Total exportado: {count} linhas.")
-            rs.close()
-            pstmt.close()
+                count = 0
+                while rs.next():
+                    linha = []
+                    for i in range(1, num_colunas + 1):
+                        valor = rs.getString(i)
+                        linha.append(str(valor) if valor is not None else "")
+                    yield linha
+                    count += 1
+                    if count % 50000 == 0:
+                        print(f"   Exportadas {count} linhas...")
+                print(f"✅ Total exportado: {count} linhas.")
+            finally:
+                # Fecha tambem quando o download e abortado (GeneratorExit) ou
+                # quando uma linha falha no meio do stream.
+                _fechar_recursos(rs, pstmt)
 
         # Criar resposta CSV com streaming
         # StreamingHttpResponse espera pedacos em bytes; o CSV e montado com
@@ -357,11 +384,17 @@ def exportar_csv(request):
         def csv_bytes():
             buffer = StringIO()
             writer = csv.writer(buffer, lineterminator='\n')
-            for linha in csv_generator():
-                writer.writerow(linha)
-                yield buffer.getvalue().encode('utf-8')
-                buffer.seek(0)
-                buffer.truncate()
+            linhas = csv_generator()
+            try:
+                for linha in linhas:
+                    writer.writerow(linha)
+                    yield buffer.getvalue().encode('utf-8')
+                    buffer.seek(0)
+                    buffer.truncate()
+            finally:
+                # Fecha o gerador de linhas; sem isso o GeneratorExit nao
+                # propaga e o ResultSet fica aberto.
+                linhas.close()
 
         response = StreamingHttpResponse(
             csv_bytes(),

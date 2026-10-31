@@ -164,3 +164,51 @@ class ExportarCsvTests(SimpleTestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'pub400 fora do ar', response.content)
+
+    def test_download_abortado_fecha_resultset_e_statement(self):
+        # Cliente cancela o download no meio: o gerador recebe GeneratorExit.
+        # Sem try/finally o cursor fica preso na conexao unica do pool e o
+        # proximo request falha com "Cursor state not valid".
+        fake = _FakeConnection([(1, 'JOSE ANTONIO'), (2, 'MARIA')])
+        request = RequestFactory().get('/pessoas/exportar-csv/')
+        with patch.object(views.pool, 'get_connection', return_value=fake), \
+                patch('builtins.print'):
+            response = views.exportar_csv(request)
+            iterator = response._iterator
+            next(iterator)  # cabecalho
+            next(iterator)  # primeira linha
+            iterator.close()  # simula o download abortado
+
+        pstmt_count, pstmt_principal = [pstmt for _, pstmt in fake.statements]
+        self.assertTrue(fake.rs_principal.fechado)
+        self.assertTrue(pstmt_principal.fechado)
+        self.assertTrue(pstmt_count.fechado)
+
+    def test_erro_na_query_principal_fecha_statement(self):
+        # Falha antes de existir ResultSet (ex: SQL0901): o Statement tambem
+        # precisa ser fechado, senao a conexao do pool fica com cursor aberto.
+        fake = _FakeConnection([])
+        prepare_statement_original = fake.prepareStatement
+        principal = _FakePreparedStatement(fake.rs_principal)
+
+        def execute_query_com_erro():
+            raise RuntimeError('SQL0901 falha no servidor')
+
+        principal.executeQuery = execute_query_com_erro
+
+        def prepare_statement(sql):
+            if 'COUNT(' not in sql:
+                fake.statements.append((sql, principal))
+                return principal
+            return prepare_statement_original(sql)
+
+        fake.prepareStatement = prepare_statement
+        request = RequestFactory().get('/pessoas/exportar-csv/')
+        with patch.object(views.pool, 'get_connection', return_value=fake), \
+                patch('builtins.print'):
+            response = views.exportar_csv(request)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'SQL0901', response.content)
+        self.assertTrue(principal.fechado)
+
