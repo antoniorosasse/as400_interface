@@ -381,23 +381,40 @@ def exportar_csv(request):
         # StreamingHttpResponse espera pedacos em bytes; o CSV e montado com
         # csv.writer (que faz o quoting dos campos com virgula/aspas) e
         # codificado em utf-8, igual ao charset do content_type.
-        def csv_bytes():
-            buffer = StringIO()
-            writer = csv.writer(buffer, lineterminator='\n')
-            linhas = csv_generator()
-            try:
-                for linha in linhas:
-                    writer.writerow(linha)
-                    yield buffer.getvalue().encode('utf-8')
-                    buffer.seek(0)
-                    buffer.truncate()
-            finally:
-                # Fecha o gerador de linhas; sem isso o GeneratorExit nao
-                # propaga e o ResultSet fica aberto.
-                linhas.close()
+        class _CsvStream:
+            """Entrega o CSV em bytes e garante o fechamento do cursor.
+
+            Classe (e nao gerador) de proposito: `close()` num gerador que nunca
+            comecou nao executa o `finally`, e a `StreamingHttpResponse` registra
+            o `close()` do objeto para chamar quando o download e abortado.
+            """
+
+            def __init__(self):
+                self._buffer = StringIO()
+                self._writer = csv.writer(self._buffer, lineterminator='\n')
+                self._linhas = csv_generator()
+                self._fechado = False
+
+            def __iter__(self):
+                return self
+
+            def __next__(self):
+                linha = next(self._linhas)
+                self._writer.writerow(linha)
+                pedaco = self._buffer.getvalue().encode('utf-8')
+                self._buffer.seek(0)
+                self._buffer.truncate()
+                return pedaco
+
+            def close(self):
+                if self._fechado:
+                    return
+                self._fechado = True
+                self._linhas.close()
+                _fechar_recursos(rs, pstmt)
 
         response = StreamingHttpResponse(
-            csv_bytes(),
+            _CsvStream(),
             content_type='text/csv;charset=utf-8'
         )
         filename = f"pessoas_{nome if nome else 'todos'}.csv"

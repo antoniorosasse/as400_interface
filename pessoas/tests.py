@@ -184,6 +184,22 @@ class ExportarCsvTests(SimpleTestCase):
         self.assertTrue(pstmt_principal.fechado)
         self.assertTrue(pstmt_count.fechado)
 
+    def test_download_cancelado_antes_do_primeiro_pedaco_fecha_recursos(self):
+        # Cliente desconecta antes do primeiro pedaco: o Django fecha a
+        # resposta sem nunca iterar. Gerador comum nao executaria o finally
+        # nesse caso (gerador nao iniciado) -- por isso o _CsvStream da view.
+        fake = _FakeConnection([(1, 'JOSE ANTONIO')])
+        request = RequestFactory().get('/pessoas/exportar-csv/')
+        with patch.object(views.pool, 'get_connection', return_value=fake), \
+                patch('builtins.print'):
+            response = views.exportar_csv(request)
+            response.close()  # o handler do Django faz o mesmo no abort
+
+        pstmt_count, pstmt_principal = [pstmt for _, pstmt in fake.statements]
+        self.assertTrue(fake.rs_principal.fechado)
+        self.assertTrue(pstmt_principal.fechado)
+        self.assertTrue(pstmt_count.fechado)
+
     def test_erro_na_query_principal_fecha_statement(self):
         # Falha antes de existir ResultSet (ex: SQL0901): o Statement tambem
         # precisa ser fechado, senao a conexao do pool fica com cursor aberto.

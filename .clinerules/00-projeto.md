@@ -68,12 +68,14 @@ neste workspace. Mantenha-o enxuto e versionado no git.
 ## Convencoes de implementacao
 
 - CSV: sempre `csv.writer` (quoting obrigatorio — enderecos tem virgula),
-  `lineterminator='\n'`, utf-8 **no gerador** (`csv_bytes()`) porque
-  `StreamingHttpResponse` no Django 6.0 recebe `Iterable[bytes]`. `rs`/`pstmt`
-  fecham em `finally` (`_fechar_recursos`) — inclusive quando o download e
-  abortado, senao o cursor preso na conexao unica vira `Cursor state not valid`
-  (fechado em 31/10; coberto por `test_download_abortado_*` e
-  `test_erro_na_query_principal_*`).
+  `lineterminator='\n'`, utf-8 **no gerador** (`csv_generator()`), porque
+  `StreamingHttpResponse` no Django 6.0 recebe `Iterable[bytes]`. O objeto
+  entregue a resposta e `_CsvStream` (classe com `close()`, nao gerador): a
+  resposta registra esse `close()` e ele fecha `rs`/`pstmt` via
+  `_fechar_recursos` — inclusive em download abortado ou antes do primeiro
+  pedaco, senao o cursor preso na conexao unica vira `Cursor state not valid`
+  (fechado em 31/10; coberto por `test_download_abortado_*`,
+  `test_download_cancelado_*` e `test_erro_na_query_principal_*`).
 
 - `exibir_estabelecimento` existe **uma vez so** (a duplicata foi removida em
   31/10); nao reintroduzir helpers duplicados em `views.py`.
