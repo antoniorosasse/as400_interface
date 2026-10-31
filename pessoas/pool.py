@@ -2,6 +2,7 @@
 # Gerencia uma conexao JDBC unica com o AS400, com validacao antes de entregar.
 import logging
 import time
+from typing import Any
 
 from .as400_conn import get_connection
 
@@ -9,13 +10,23 @@ logger = logging.getLogger(__name__)
 
 
 class ConnectionPool:
+    """
+    Pool de uma conexao JDBC unica com o AS400.
+
+    `conn` guarda um java.sql.Connection (objeto JPype) ou None enquanto nada
+    foi aberto. Vem anotado como Any porque as classes JDBC so existem dentro
+    da JVM: sem a anotacao o Pylance infere "None" a partir do `self.conn =
+    None` e acusa reportOptionalMemberAccess em todo `conn.createStatement()`
+    / `prepareStatement()` do projeto.
+    """
+
     def __init__(self, max_age=300, valid_timeout=2):
-        self.conn = None
+        self.conn: Any = None
         self.last_used = 0
         self.max_age = max_age
         self.valid_timeout = valid_timeout
 
-    def _fechar_atual(self):
+    def _fechar_atual(self) -> None:
         if self.conn is not None:
             try:
                 self.conn.close()
@@ -23,12 +34,12 @@ class ConnectionPool:
                 pass
         self.conn = None
 
-    def _criar_nova(self):
+    def _criar_nova(self) -> None:
         self._fechar_atual()
         self.conn = get_connection()
         self.last_used = time.time()
 
-    def get_connection(self):
+    def get_connection(self) -> Any:
         now = time.time()
 
         # 1) Sem conexao ou passou do max_age -> cria nova
@@ -48,7 +59,7 @@ class ConnectionPool:
         self.last_used = now
         return self.conn
 
-    def fechar(self):
+    def fechar(self) -> None:
         """Fecha a conexao atual (usado em shutdown / testes)."""
         self._fechar_atual()
 

@@ -1,6 +1,8 @@
 # Arquivo: pessoas/as400_conn.py
 # Este arquivo contém funções para iniciar a JVM e estabelecer uma conexão com o AS400 usando JDBC
 import os
+from typing import Any
+
 import jpype
 import jpype.imports
 from django.conf import settings
@@ -8,7 +10,7 @@ from django.conf import settings
 # Caminho absoluto para o jt400.jar dentro do projeto
 JAR_PATH = os.path.join(settings.BASE_DIR, 'lib', 'jt400.jar')
 
-def iniciar_jvm():
+def iniciar_jvm() -> None:
     if not jpype.isJVMStarted():
         # Verifica se o arquivo existe
         if not os.path.exists(JAR_PATH):
@@ -16,7 +18,16 @@ def iniciar_jvm():
         jpype.startJVM(classpath=[JAR_PATH])
         print("JVM iniciada com sucesso.")
 
-def get_connection():
+def get_connection() -> Any:
+    """
+    Abre uma conexao JDBC com o AS400 e devolve o java.sql.Connection.
+
+    O retorno e tipado como Any de proposito: as classes JDBC (Connection,
+    Statement, ResultSet...) so existem dentro da JVM em tempo de execucao,
+    entao o Pylance nao conhece os metodos (createStatement, prepareStatement
+    etc.). Sem o Any, ele infere "None" e acusa reportOptionalMemberAccess em
+    todo `conn.createStatement()` do projeto.
+    """
     iniciar_jvm()
     host = settings.AS400_HOST
     user = settings.AS400_USER

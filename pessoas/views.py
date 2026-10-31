@@ -351,8 +351,20 @@ def exportar_csv(request):
             pstmt.close()
 
         # Criar resposta CSV com streaming
+        # StreamingHttpResponse espera pedacos em bytes; o CSV e montado com
+        # csv.writer (que faz o quoting dos campos com virgula/aspas) e
+        # codificado em utf-8, igual ao charset do content_type.
+        def csv_bytes():
+            buffer = StringIO()
+            writer = csv.writer(buffer, lineterminator='\n')
+            for linha in csv_generator():
+                writer.writerow(linha)
+                yield buffer.getvalue().encode('utf-8')
+                buffer.seek(0)
+                buffer.truncate()
+
         response = StreamingHttpResponse(
-            (','.join(linha) + '\n' for linha in csv_generator()),
+            csv_bytes(),
             content_type='text/csv;charset=utf-8'
         )
         filename = f"pessoas_{nome if nome else 'todos'}.csv"
@@ -945,43 +957,7 @@ def exibir_estabelecimento(request, cep):
     except Exception as e:
         return render(request, 'pessoas/erro.html', {'erro': str(e)})  
 
-def exibir_estabelecimento(request, cep):
-    """
-    Exibe o conteúdo do campo ESTABELECIMENTOS (CLOB) para um CEP específico.
-    """
-    from .ceps import pool
-    from django.http import HttpResponse
 
-    conn = pool.get_connection()
-    try:
-        pstmt = conn.prepareStatement("""
-            SELECT CEP, ESTABELECIMENTOS
-            FROM AROSASSE1.CEPSGEN
-            WHERE CEP = ?
-        """)
-        pstmt.setString(1, cep)
-        rs = pstmt.executeQuery()
-        if rs.next():
-            cep_str = str(rs.getString('CEP')).strip()
-            estabelecimento = rs.getString('ESTABELECIMENTOS')  # Pode ser CLOB
-            if estabelecimento is not None:
-                estabelecimento_str = str(estabelecimento)  # Converte para string Python
-            else:
-                estabelecimento_str = ''
-            rs.close()
-            pstmt.close()
-            context = {
-                'cep': cep_str,
-                'estabelecimento': estabelecimento_str,
-            }
-            return render(request, 'pessoas/estabelecimento.html', context)
-        else:
-            rs.close()
-            pstmt.close()
-            return render(request, 'pessoas/erro.html', {'erro': 'CEP não encontrado.'})
-    except Exception as e:
-        return render(request, 'pessoas/erro.html', {'erro': str(e)})
-    
 def chat_pessoas(request):
     """
     View para o chat com IA (DeepSeek) com suporte a contexto.
