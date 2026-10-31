@@ -10,7 +10,7 @@ neste workspace. Mantenha-o enxuto e versionado no git.
 | Regras globais (valem nos 4 projetos: menu, as400, cnpj, carga) | `~/Documentos/Cline/Rules/00-sistema-arosasse.md` |
 | Estado atual, pendencias, decisoes e arquitetura | `/home/neto/Projetos/docs/PROJETOS.md` (secao 7.3) |
 | Comandos (dev/prod, curl de paginacao, health) | `/home/neto/Projetos/docs/COMANDOS.md` |
-| Historico detalhado (blocos 1-32) | `/home/neto/Projetos/docs/HISTORICO.md` |
+| Historico detalhado (com commits e erros) | `/home/neto/Projetos/docs/HISTORICO.md` |
 | Briefing portatil (para outra IA) | `/home/neto/Projetos/docs/TODOS_PROJETOS.md` |
 
 ## Idioma e estilo
