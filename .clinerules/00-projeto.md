@@ -48,7 +48,7 @@ neste workspace. Mantenha-o enxuto e versionado no git.
 
     source env_django/bin/activate
     python manage.py runserver 8001          # http://localhost:8001/
-    python manage.py test pessoas            # 5 testes de CSV, sem AS400
+    python manage.py test pessoas            # 8 testes (CSV + cursor), sem AS400
     python manage.py check
     time curl -s http://localhost:8001/health/deep/   # 2x: frio ~3-5s, quente ~1,4s
 
