@@ -1,8 +1,8 @@
 # AS/400 Interface
 
 Interface web para consulta e CRUD de pessoas em um IBM i (AS/400) remoto
-(pub400.com), com integracao a PostgreSQL e MongoDB. Inclui um chat IA que
-traduz perguntas em linguagem natural para SQL.
+(pub400.com), via JDBC. O banco local e **SQLite**, usado so pra sessao e
+admin. Inclui um chat IA que traduz perguntas em linguagem natural para SQL.
 
 Este repositorio contem **duas partes**:
 
@@ -16,8 +16,8 @@ Este repositorio contem **duas partes**:
 - Django 6.0.7
 - Python 3.13
 - JPype + jt400.jar (conexao JDBC com AS/400)
-- PostgreSQL (psycopg2-binary)
-- MongoDB (pymongo)
+- SQLite (`db.sqlite3`) — apenas sessao, admin e migrations
+- Cache LocMem (`as400-cache`, `TIMEOUT=300`)
 - DeepSeek (chat IA via `openai` SDK)
 - Gunicorn + systemd (producao)
 
@@ -49,6 +49,9 @@ Este repositorio contem **duas partes**:
     |   +-- chat.py                 # Pipeline do chat IA
     |   +-- contexto.py             # Contexto da conversa
     |   +-- validators.py           # Validacao de CPF, email, etc
+    |   +-- models.py               # Vazio: os dados vem do IBM i via JDBC (sem ORM)
+    |   +-- admin.py                # Vazio: nenhum model local registrado
+    |   +-- tests.py                # 8 testes automatizados do export CSV
     |   +-- views.py                # Views (1100+ linhas)
     +-- ceps-api/                   # Projeto Java (Spring Boot)
     |   +-- src/
@@ -73,7 +76,7 @@ Este repositorio contem **duas partes**:
 - Python 3.13
 - JDK 11+ (a JVM e necessaria pro JDBC)
 - Credenciais de um IBM i (por padrao, usa o `pub400.com`)
-- PostgreSQL rodando (usado pra sessao/admin)
+- Nenhum servidor de banco local: o `migrate` cria o `db.sqlite3` (sessao/admin)
 
 ### Django
 
@@ -126,7 +129,8 @@ Ver `.env.example`. As principais:
 
 | Metodo | URL | O que faz |
 |---|---|---|
-| GET | `/` | Lista paginada de pessoas |
+| GET | `/` | Home: lista paginada de pessoas (mesma view de `/pessoas/paginadas/`) |
+| GET | `/pessoas/` | Redireciona (302) para `/pessoas/paginadas/` |
 | GET | `/pessoas/paginadas/` | Lista com filtros avancados |
 | GET | `/pessoas/<id>/` | Detalhe de uma pessoa |
 | GET/POST | `/pessoas/novo/` | Cadastra nova pessoa |
@@ -171,9 +175,18 @@ Na maquina NoteNeto:
 
 ## Testes
 
-Os arquivos `teste_*.py` na raiz sao scripts de teste de conexao com o
-AS/400 usando diferentes bibliotecas (ibm_db, JayDeBeApi, JPype, jt400).
-Servem pra diagnosticar qual driver funciona melhor em cada ambiente.
+Suite automatizada do app `pessoas` (**8 testes**, todos `SimpleTestCase`):
+
+    python manage.py test pessoas
+
+Eles cobrem o export CSV: streaming UTF-8, fechamento de `ResultSet`/`Statement`
+em erro de SQL e em download abortado pelo cliente. O pool JDBC e mockado —
+nenhum teste toca no AS/400 real.
+
+Os arquivos `teste_*.py` na raiz sao scripts **manuais** de teste de conexao com
+o AS/400 usando diferentes bibliotecas (ibm_db, JayDeBeApi, JPype, jt400).
+Servem pra diagnosticar qual driver funciona melhor em cada ambiente e nao
+fazem parte da suite.
 
 ## Sobre o `ceps-api/`
 
