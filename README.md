@@ -1,13 +1,13 @@
 # AS/400 Interface
 
 Interface web para consulta e CRUD de pessoas em um IBM i (AS/400) remoto
-(pub400.com), via JDBC. O banco local e **SQLite**, usado so pra sessao e
+(pub400.com), via JDBC. O banco local e **SQLite**, usado só pra sessão e
 admin. Inclui um chat IA que traduz perguntas em linguagem natural para SQL.
 
-Este repositorio contem **duas partes**:
+Este repositório contém **duas partes**:
 
-1. **Aplicacao Django** (raiz do repo) — interface web
-2. **API Java Spring Boot** (`ceps-api/`) — API REST que expoe dados de CEP do IBM i
+1. **Aplicação Django** (raiz do repo) — interface web
+2. **API Java Spring Boot** (`ceps-api/`) — API REST que expõe dados de CEP do IBM i
 
 ## Stack
 
@@ -15,11 +15,11 @@ Este repositorio contem **duas partes**:
 
 - Django 6.0.7
 - Python 3.13
-- JPype + jt400.jar (conexao JDBC com AS/400)
-- SQLite (`db.sqlite3`) — apenas sessao, admin e migrations
+- JPype + jt400.jar (conexão JDBC com AS/400)
+- SQLite (`db.sqlite3`) — apenas sessão, admin e migrations
 - Cache LocMem (`as400-cache`, `TIMEOUT=300`)
 - DeepSeek (chat IA via `openai` SDK)
-- Gunicorn + systemd (producao)
+- Gunicorn + systemd (produção)
 
 ### Java (`ceps-api/`)
 
@@ -71,12 +71,12 @@ Este repositorio contem **duas partes**:
 
 ## Como rodar local
 
-### Pre-requisitos
+### Pré-requisitos
 
 - Python 3.13
-- JDK 11+ (a JVM e necessaria pro JDBC)
-- Credenciais de um IBM i (por padrao, usa o `pub400.com`)
-- Nenhum servidor de banco local: o `migrate` cria o `db.sqlite3` (sessao/admin)
+- JDK 11+ (a JVM é necessária pro JDBC)
+- Credenciais de um IBM i (por padrão, usa o `pub400.com`)
+- Nenhum servidor de banco local: o `migrate` cria o `db.sqlite3` (sessão/admin)
 
 ### Django
 
@@ -97,41 +97,41 @@ Acessa em http://localhost:8001/
 
 ## Requisitos de dados
 
-Este repositorio **nao inclui** o banco AS/400 nem os dados de pessoas.
-A aplicacao se conecta a um IBM i remoto e le a tabela `AROSASSE1.PESSOAS`
-que vive la.
+Este repositório **não inclui** o banco AS/400 nem os dados de pessoas.
+A aplicação se conecta a um IBM i remoto e le a tabela `AROSASSE1.PESSOAS`
+que vive lá.
 
-Para rodar, voce precisa:
+Para rodar, você precisa:
 
-1. **Criar conta no `pub400.com`** (IBM i publico de testes) ou ter acesso
+1. **Criar conta no `pub400.com`** (IBM i público de testes) ou ter acesso
    a outro IBM i.
 2. Colocar as credenciais no `.env` (`AS400_HOST`, `AS400_USER`,
    `AS400_PASSWORD`, `AS400_LIBRARY`).
-3. **Criar a tabela `AROSASSE1.PESSOAS`** no IBM i. O DDL nao esta
+3. **Criar a tabela `AROSASSE1.PESSOAS`** no IBM i. O DDL não está
    versionado — a tabela existia no ambiente original e precisa ser
    recriada manualmente (colunas: `ID_PESSOA`, `CPF`, `NOMECOMPL`,
    `EMAIL`, `TELEFONE`, `DATA_NASC`, `STATUS`, `CEP`, `ESTADO`,
    `CIDADE`, `BAIRRO`, `ENDERECO`, `NUMERO`, `COMPLEMENTO`,
    `DATACADAST`).
-4. Baixar o `lib/jt400.jar` (nao versionado — ver `lib/README.md`).
+4. Baixar o `lib/jt400.jar` (não versionado — ver `lib/README.md`).
 
-Sem esses passos, o app sobe mas nao consegue listar nem cadastrar nada.
+Sem esses passos, o app sobe mas não consegue listar nem cadastrar nada.
 
-### Variaveis de ambiente
+### Variáveis de ambiente
 
 Ver `.env.example`. As principais:
 
-- `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` — Django padrao
+- `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` — Django padrão
 - `AS400_HOST`, `AS400_USER`, `AS400_PASSWORD`, `AS400_LIBRARY` — IBM i
 - `DEEPSEEK_API_KEY` — chave da API do chat
 
 ## Endpoints
 
-| Metodo | URL | O que faz |
+| Método | URL | O que faz |
 |---|---|---|
 | GET | `/` | Home: lista paginada de pessoas (mesma view de `/pessoas/paginadas/`) |
 | GET | `/pessoas/` | Redireciona (302) para `/pessoas/paginadas/` |
-| GET | `/pessoas/paginadas/` | Lista com filtros avancados |
+| GET | `/pessoas/paginadas/` | Lista com filtros avançados |
 | GET | `/pessoas/<id>/` | Detalhe de uma pessoa |
 | GET/POST | `/pessoas/novo/` | Cadastra nova pessoa |
 | GET/POST | `/pessoas/<id>/editar/` | Edita pessoa |
@@ -142,7 +142,7 @@ Ver `.env.example`. As principais:
 | GET | `/lista-ceps/` | Lista CEPs |
 | GET | `/estabelecimento/<cep>/` | Estabelecimentos do CEP |
 | GET/POST | `/chat-pessoas/` | Chat IA |
-| GET | `/testar-deepseek/` | Testa conexao com DeepSeek |
+| GET | `/testar-deepseek/` | Testa conexão com DeepSeek |
 | GET | `/health/` | Health check leve |
 | GET | `/health/deep/` | Health check profundo (testa AS/400) |
 
@@ -158,24 +158,24 @@ O pipeline do chat:
 Arquivos:
 
 - `pessoas/chat.py` — pipeline principal
-- `pessoas/contexto.py` — mantem contexto da conversa (ultimas 5 interacoes,
-  extraidas via IA)
+- `pessoas/contexto.py` — mantém contexto da conversa (últimas 5 interações,
+  extraídas via IA)
 - DeepSeek via `openai` SDK apontando para `https://api.deepseek.com/v1`
 
 ## Deploy
 
-Na maquina NoteNeto:
+Na máquina NoteNeto:
 
     ./deploy.sh as400
 
 ## Ambiente
 
 - **Local:** http://localhost:8001
-- **Producao:** https://as400.arosasse.tech
+- **Produção:** https://as400.arosasse.tech
 
 ## Testes
 
-Suite automatizada do app `pessoas` (**8 testes**, todos `SimpleTestCase`):
+Suíte automatizada do app `pessoas` (**8 testes**, todos `SimpleTestCase`):
 
     python manage.py test pessoas
 
@@ -183,36 +183,36 @@ Eles cobrem o export CSV: streaming UTF-8, fechamento de `ResultSet`/`Statement`
 em erro de SQL e em download abortado pelo cliente. O pool JDBC e mockado —
 nenhum teste toca no AS/400 real.
 
-Os arquivos `teste_*.py` na raiz sao scripts **manuais** de teste de conexao com
+Os arquivos `teste_*.py` na raiz são scripts **manuais** de teste de conexão com
 o AS/400 usando diferentes bibliotecas (ibm_db, JayDeBeApi, JPype, jt400).
-Servem pra diagnosticar qual driver funciona melhor em cada ambiente e nao
+Servem pra diagnosticar qual driver funciona melhor em cada ambiente e não
 fazem parte da suite.
 
 ## Sobre o `ceps-api/`
 
-O `ceps-api/` e uma aplicacao **Java Spring Boot** que expoe os dados de
-CEP da tabela `AROSASSE1.CEPS` do IBM i via API REST. Ele **nao** e
-chamado pela aplicacao Django em runtime — os dois convivem no mesmo
-repositorio por conveniencia, mas sao pecas independentes.
+O `ceps-api/` é uma aplicação **Java Spring Boot** que expõe os dados de
+CEP da tabela `AROSASSE1.CEPS` do IBM i via API REST. Ele **não** é
+chamado pela aplicação Django em runtime — os dois convivem no mesmo
+repositório por conveniência, mas são peças independentes.
 
 O que ele faz:
 
 - `@RestController` em `CepController.java`
-- Le a tabela `AROSASSE1.CEPS` via JDBC (`DriverManager`)
-- Expoe pelo menos 1 endpoint REST: `GET /ceps` (retorna `id`, `uf`,
+- Lê a tabela `AROSASSE1.CEPS` via JDBC (`DriverManager`)
+- Expõe pelo menos 1 endpoint REST: `GET /ceps` (retorna `id`, `uf`,
   `cidade`, `cepDe`, `cepAte`)
-- Usa a variavel de ambiente `AS400_PASSWORD` (nao tem senha hardcoded)
+- Usa a variável de ambiente `AS400_PASSWORD` (não tem senha hardcoded)
 
 Como rodar local:
 
     cd ceps-api
     ./mvnw spring-boot:run
 
-O `application.properties` em `src/main/resources/` tem as configuracoes
-de conexao. Se for rodar dentro do IBM i, e preciso empacotar com
+O `application.properties` em `src/main/resources/` tem as configurações
+de conexão. Se for rodar dentro do IBM i, é preciso empacotar com
 `./mvnw package` e copiar o `.jar` gerado.
 
-## Repositorios relacionados
+## Repositórios relacionados
 
 - [cnpj_interface](https://github.com/antoniorosasse/cnpj_interface)
 - [menu_interface](https://github.com/antoniorosasse/menu_interface)
