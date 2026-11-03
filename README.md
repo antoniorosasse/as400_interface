@@ -9,6 +9,26 @@ Este repositório contém **duas partes**:
 1. **Aplicação Django** (raiz do repo) — interface web
 2. **API Java Spring Boot** (`ceps-api/`) — API REST que expõe dados de CEP do IBM i
 
+## Índice
+
+- [Stack](#stack)
+  - [Django (raiz)](#django-raiz)
+  - [Java (`ceps-api/`)](#java-ceps-api)
+- [Estrutura](#estrutura)
+- [Como rodar local](#como-rodar-local)
+  - [Pré-requisitos](#pré-requisitos)
+  - [Django](#django)
+  - [Java (ceps-api)](#java-ceps-api-1)
+- [Requisitos de dados](#requisitos-de-dados)
+  - [Variáveis de ambiente](#variáveis-de-ambiente)
+- [Endpoints](#endpoints)
+- [Chat IA](#chat-ia)
+- [Deploy](#deploy)
+- [Ambiente](#ambiente)
+- [Testes](#testes)
+- [Sobre o `ceps-api/`](#sobre-o-ceps-api)
+- [Repositórios relacionados](#repositórios-relacionados)
+
 ## Stack
 
 ### Django (raiz)
