@@ -93,13 +93,18 @@ Este repositório contém **duas partes**:
 
 ## Front-end (tema e CSS)
 
-- Bootstrap 5.3 via CDN (`pessoas/templates/base.html`), com tema claro/escuro
+- Bootstrap **5.3.8** via CDN (`pessoas/templates/base.html`), com tema claro/escuro
   nativo (`data-bs-theme`) alternado pelo botão da navbar. A escolha fica em
   `localStorage['sistema-tema']` — a mesma chave do `cnpj_interface` (o
   `localStorage` é por origem, então cada subdomínio guarda a própria escolha; a
   chave única é o que permite unificar os módulos depois). `?tema=dark|light`
   força o tema pela URL e o script do `<head>` aplica antes do CSS (sem flash
   branco).
+- **Em dev o `static` nao e servido**: `DEBUG` tem default `'False'` no
+  `settings.py`, entao `runserver` sem `DEBUG=True` devolve 404 em
+  `/static/pessoas/css/sistema.css` (a tabela aparece sem faixa no cabecalho e os
+  botoes quebram linha). Para ver o visual local:
+  `DEBUG=True ./env_django/bin/python manage.py runserver 8001`.
 - `pessoas/static/pessoas/css/sistema.css` é a mesma folha do `cnpj_interface`
   (tabela densa, cabeçalho discreto, pills suaves, números alinhados) e a
   transformação de tabela em cartões no celular (`.tabela-cards`, via
