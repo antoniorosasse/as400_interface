@@ -5,18 +5,20 @@
 
 {% block content %}
 <style>
+    /* Cores sempre por variavel do Bootstrap (--bs-*): os mesmos estilos
+       valem no tema claro e no escuro (data-bs-theme no base.html). */
     .chat-container {
         max-height: 500px;
         overflow-y: auto;
-        border: 1px solid #dee2e6;
+        border: 1px solid var(--bs-border-color);
         border-radius: 8px;
         padding: 15px;
-        background: #f8f9fa;
+        background: var(--bs-tertiary-bg);
         min-height: 300px;
     }
     .message-user {
-        background: #007bff;
-        color: white;
+        background: var(--bs-primary);
+        color: #fff;
         padding: 10px 15px;
         border-radius: 15px 15px 5px 15px;
         margin: 5px 0;
@@ -25,8 +27,8 @@
         clear: both;
     }
     .message-bot {
-        background: #e9ecef;
-        color: #333;
+        background: var(--bs-secondary-bg);
+        color: var(--bs-body-color);
         padding: 10px 15px;
         border-radius: 15px 15px 15px 5px;
         margin: 5px 0;
@@ -35,8 +37,9 @@
         clear: both;
     }
     .message-bot strong {
-        color: #007bff;
+        color: var(--bs-primary-text-emphasis);
     }
+    /* Tabela que o LLM devolve no texto: mesmo visual do .sis-tabela */
     .message-bot table {
         border-collapse: collapse;
         width: 100%;
@@ -44,43 +47,48 @@
         font-size: 13px;
     }
     .message-bot th {
-        background: #007bff;
-        color: white;
+        background: var(--bs-tertiary-bg);
+        color: var(--bs-secondary-color);
+        font-size: .6875rem;
+        text-transform: uppercase;
+        letter-spacing: .04em;
         padding: 6px 10px;
         text-align: left;
-        border: 1px solid #dee2e6;
+        border-bottom: 1px solid var(--bs-border-color);
     }
     .message-bot td {
         padding: 5px 10px;
-        border: 1px solid #dee2e6;
+        border-bottom: 1px solid var(--bs-border-color-translucent);
     }
     .message-bot tr:nth-child(even) {
-        background: #f8f9fa;
+        background: var(--bs-tertiary-bg);
     }
     .message-bot tr:hover {
-        background: #e9ecef;
+        background: var(--bs-primary-bg-subtle);
     }
     .message-bot .total-destaque {
-        background: #d4edda;
+        background: var(--bs-success-bg-subtle);
+        color: var(--bs-body-color);
         padding: 8px 12px;
         border-radius: 4px;
         margin: 10px 0;
         font-weight: bold;
-        border-left: 4px solid #28a745;
+        border-left: 4px solid var(--bs-success);
     }
     .message-bot .resumo-card {
-        background: #f8f9fa;
-        border-left: 4px solid #007bff;
+        background: var(--bs-tertiary-bg);
+        border-left: 4px solid var(--bs-primary);
         padding: 10px 15px;
         margin: 10px 0;
         border-radius: 4px;
     }
     .message-sql {
-        background: #fff3cd;
-        border: 1px solid #ffc107;
+        background: var(--bs-warning-bg-subtle);
+        border: 1px solid var(--bs-warning-border-subtle);
+        color: var(--bs-body-color);
         padding: 8px 12px;
         border-radius: 4px;
-        font-family: monospace;
+        font-family: var(--bs-font-monospace);
         font-size: 12px;
         margin: 5px 0;
         max-width: 90%;
@@ -89,12 +97,12 @@
         word-break: break-all;
     }
     .message-sql strong {
-        color: #856404;
+        color: var(--bs-warning-text-emphasis);
     }
     .message-system {
-        background: #d1ecf1;
-        border: 1px solid #bee5eb;
-        color: #0c5460;
+        background: var(--bs-info-bg-subtle);
+        border: 1px solid var(--bs-info-border-subtle);
+        color: var(--bs-info-text-emphasis);
         padding: 10px 15px;
         border-radius: 8px;
         margin: 5px 0;
@@ -104,9 +112,9 @@
         text-align: center;
     }
     .message-quantidade {
-        background: #e8f5e9;
-        border: 1px solid #4caf50;
-        color: #1b5e20;
+        background: var(--bs-success-bg-subtle);
+        border: 1px solid var(--bs-success-border-subtle);
+        color: var(--bs-success-text-emphasis);
         padding: 8px 15px;
         border-radius: 8px;
         margin: 5px 0;
@@ -133,36 +141,36 @@
         transition: all 0.2s;
     }
     .sugestao-badge:hover {
-        background: #007bff !important;
-        color: white !important;
+        background: var(--bs-primary) !important;
+        color: #fff !important;
         transform: scale(1.05);
     }
     .chat-header-info {
         font-size: 14px;
-        color: #6c757d;
+        color: var(--bs-secondary-color);
     }
     #chatContainer::-webkit-scrollbar {
         width: 6px;
     }
     #chatContainer::-webkit-scrollbar-track {
-        background: #f1f1f1;
+        background: var(--bs-secondary-bg);
         border-radius: 3px;
     }
     #chatContainer::-webkit-scrollbar-thumb {
-        background: #888;
+        background: var(--bs-secondary-color);
         border-radius: 3px;
     }
     #chatContainer::-webkit-scrollbar-thumb:hover {
-        background: #555;
+        background: var(--bs-body-color);
     }
 </style>
 
 <div class="card shadow-sm">
-    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+    <div class="card-header bg-body-tertiary border-bottom d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
             <i class="fas fa-robot"></i> 
             Chat Inteligente com IA (DeepSeek)
-            <small class="text-light ms-2">Pergunte sobre os dados do sistema</small>
+            <small class="text-body-secondary ms-2">Pergunte sobre os dados do sistema</small>
         </h5>
         <span class="chat-header-info">
             <i class="fas fa-brain"></i> IA com contexto
@@ -213,19 +221,19 @@
                 <small class="text-muted me-2 mt-1">
                     <i class="fas fa-lightbulb"></i> Sugestões:
                 </small>
-                <span class="badge bg-light text-dark sugestao-badge" onclick="sugerir('Quantas pessoas estão ativas?')">
+                <span class="badge sis-pill bg-body-tertiary text-body sugestao-badge" onclick="sugerir('Quantas pessoas estão ativas?')">
                     Total de ativos
                 </span>
-                <span class="badge bg-light text-dark sugestao-badge" onclick="sugerir('Liste os 10 clientes mais recentes')">
+                <span class="badge sis-pill bg-body-tertiary text-body sugestao-badge" onclick="sugerir('Liste os 10 clientes mais recentes')">
                     Últimos cadastros
                 </span>
-                <span class="badge bg-light text-dark sugestao-badge" onclick="sugerir('Mostre os clientes de São Paulo')">
+                <span class="badge sis-pill bg-body-tertiary text-body sugestao-badge" onclick="sugerir('Mostre os clientes de São Paulo')">
                     Clientes SP
                 </span>
-                <span class="badge bg-light text-dark sugestao-badge" onclick="sugerir('Quantos clientes estão inativos?')">
+                <span class="badge sis-pill bg-body-tertiary text-body sugestao-badge" onclick="sugerir('Quantos clientes estão inativos?')">
                     Inativos
                 </span>
-                <span class="badge bg-light text-dark sugestao-badge" onclick="sugerir('Liste os clientes por cidade')">
+                <span class="badge sis-pill bg-body-tertiary text-body sugestao-badge" onclick="sugerir('Liste os clientes por cidade')">
                     Agrupar por cidade
                 </span>
             </div>
@@ -235,25 +243,25 @@
                 <small class="text-muted me-2 mt-1">
                     <i class="fas fa-arrow-right"></i> Teste contexto:
                 </small>
-                <span class="badge bg-light text-dark sugestao-badge" onclick="sugerir('Mostre os clientes de São Paulo')">
+                <span class="badge sis-pill bg-body-tertiary text-body sugestao-badge" onclick="sugerir('Mostre os clientes de São Paulo')">
                     1️⃣ SP
                 </span>
-                <span class="badge bg-light text-dark sugestao-badge" onclick="sugerir('Agora divida por bairro')">
+                <span class="badge sis-pill bg-body-tertiary text-body sugestao-badge" onclick="sugerir('Agora divida por bairro')">
                     2️⃣ Dividir por bairro
                 </span>
-                <span class="badge bg-light text-dark sugestao-badge" onclick="sugerir('E por status?')">
+                <span class="badge sis-pill bg-body-tertiary text-body sugestao-badge" onclick="sugerir('E por status?')">
                     3️⃣ E por status?
                 </span>
             </div>
         </form>
     </div>
-    <div class="card-footer text-muted d-flex justify-content-between align-items-center">
+    <div class="card-footer bg-body-tertiary text-body-secondary d-flex justify-content-between align-items-center">
         <small>
             <i class="fas fa-info-circle"></i> 
             Este chat usa IA da DeepSeek com contexto de conversa.
         </small>
         <small>
-            <span id="conversaAtiva" class="badge bg-success">Contexto ativo</span>
+            <span id="conversaAtiva" class="badge sis-pill bg-success-subtle text-success-emphasis">Contexto ativo</span>
         </small>
     </div>
 </div>
@@ -349,7 +357,7 @@ function enviarPergunta() {
             // Atualizar indicador de contexto
             if (data.contexto && Object.keys(data.contexto).length > 0) {
                 document.getElementById('conversaAtiva').textContent = 'Contexto: ' + Object.keys(data.contexto).join(', ');
-                document.getElementById('conversaAtiva').className = 'badge bg-success';
+                document.getElementById('conversaAtiva').className = 'badge sis-pill bg-success-subtle text-success-emphasis';
             }
         } else {
             adicionarMensagem('❌ ' + (data.erro || 'Erro ao processar sua pergunta.'), 'bot');
@@ -385,7 +393,7 @@ function limparConversa() {
         if (data.success) {
             adicionarMensagem('🧹 ' + data.resposta, 'system');
             document.getElementById('conversaAtiva').textContent = 'Contexto limpo';
-            document.getElementById('conversaAtiva').className = 'badge bg-secondary';
+            document.getElementById('conversaAtiva').className = 'badge sis-pill bg-secondary-subtle text-secondary-emphasis';
             const container = document.getElementById('chatContainer');
             container.scrollTop = container.scrollHeight;
         }
@@ -406,7 +414,7 @@ function limparChat() {
         </div>
     `;
     document.getElementById('conversaAtiva').textContent = 'Contexto ativo';
-    document.getElementById('conversaAtiva').className = 'badge bg-success';
+    document.getElementById('conversaAtiva').className = 'badge sis-pill bg-success-subtle text-success-emphasis';
 }
 
 // ============================================================

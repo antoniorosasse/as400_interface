@@ -63,6 +63,8 @@ Este repositório contém **duas partes**:
     |   |   +-- estabelecimento.html
     |   |   +-- confirmar_exclusao.html
     |   |   +-- erro.html
+    |   +-- static/pessoas/css/
+    |   |   +-- sistema.css        # Linguagem visual comum (tabela, pills, tema)
     |   +-- as400_conn.py           # Conexao JDBC com AS/400
     |   +-- pool.py                 # Conexao unica JDBC (isValid + max_age)
     |   +-- ceps.py                 # Busca de CEP
@@ -88,6 +90,24 @@ Este repositório contém **duas partes**:
     +-- manage.py
     +-- requirements.txt
     +-- runtime.txt
+
+## Front-end (tema e CSS)
+
+- Bootstrap 5.3 via CDN (`pessoas/templates/base.html`), com tema claro/escuro
+  nativo (`data-bs-theme`) alternado pelo botão da navbar. A escolha fica em
+  `localStorage['sistema-tema']` — a mesma chave do `cnpj_interface` (o
+  `localStorage` é por origem, então cada subdomínio guarda a própria escolha; a
+  chave única é o que permite unificar os módulos depois). `?tema=dark|light`
+  força o tema pela URL e o script do `<head>` aplica antes do CSS (sem flash
+  branco).
+- `pessoas/static/pessoas/css/sistema.css` é a mesma folha do `cnpj_interface`
+  (tabela densa, cabeçalho discreto, pills suaves, números alinhados) e a
+  transformação de tabela em cartões no celular (`.tabela-cards`, via
+  `data-label` de cada `<td>`). As cores saem das variáveis do Bootstrap
+  (`--bs-*-bg-subtle`, `--bs-border-color`, `--bs-tertiary-bg`), então o tema
+  escuro não precisa de CSS próprio.
+- Os estilos locais (`.chat-container`, `.message-*` no chat de pessoas) usam
+  as mesmas variáveis; nenhuma cor fixa fora do texto branco sobre `primary`.
 
 ## Como rodar local
 

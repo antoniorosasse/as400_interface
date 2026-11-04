@@ -2,14 +2,14 @@
 {% block title %}Estabelecimentos do CEP {{ cep }}{% endblock %}
 {% block content %}
 <div class="card">
-    <div class="card-header bg-primary text-white">
-        <h5><i class="fas fa-building"></i> Estabelecimentos - CEP {{ cep }}</h5>
+    <div class="card-header bg-body-tertiary border-bottom">
+        <h5 class="mb-0"><i class="fas fa-building"></i> Estabelecimentos - CEP {{ cep }}</h5>
     </div>
     <div class="card-body">
-        <pre style="white-space: pre-wrap; word-wrap: break-word; max-height: 500px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 5px; font-family: monospace;">{{ estabelecimento }}</pre>
+        <pre style="white-space: pre-wrap; word-wrap: break-word; max-height: 500px; overflow-y: auto; background: var(--bs-tertiary-bg); color: var(--bs-body-color); padding: 10px; border-radius: 5px; font-family: var(--bs-font-monospace); margin-bottom: 0;">{{ estabelecimento }}</pre>
     </div>
-    <div class="card-footer">
-        <button onclick="window.close()" class="btn btn-secondary">
+    <div class="card-footer bg-body-tertiary">
+        <button onclick="window.close()" class="btn btn-outline-secondary btn-sm">
             <i class="fas fa-times"></i> Fechar
         </button>
     </div>
