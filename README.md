@@ -216,7 +216,7 @@ Na máquina NoteNeto:
 ## Ambiente
 
 - **Local:** http://localhost:8001
-- **Produção:** https://as400.arosasse.tech
+- **Produção:** https://as400.busquecnpj.com.br
 
 ## Testes
 
