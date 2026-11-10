@@ -122,14 +122,23 @@ CACHES = {
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'detalhado': {
+            'format': '{asctime} {levelname} {name} {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+    },
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
+            'formatter': 'detalhado',
         },
         'file': {
             'level': 'ERROR',
             'class': 'logging.FileHandler',
             'filename': str(LOG_DIR / 'django_errors.log'),
+            'formatter': 'detalhado',
         },
     },
     'loggers': {
@@ -137,6 +146,14 @@ LOGGING = {
             'handlers': ['file', 'console'],
             'level': 'ERROR',
             'propagate': True,
+        },
+        # Host invalido (scanner/GPTBot) e ruido: vai so para o console e
+        # nunca para django_errors.log. A origem e cortada no nginx, no
+        # server block 00-default (return 444 / ssl_reject_handshake).
+        'django.security.DisallowedHost': {
+            'handlers': ['console'],
+            'level': 'ERROR',
+            'propagate': False,
         },
         'pessoas': {
             'handlers': ['file', 'console'],
