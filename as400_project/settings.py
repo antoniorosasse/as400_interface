@@ -74,12 +74,12 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # ==================== AUTENTICACAO ====================
 # Telas de pessoas (listagem, detalhe, criacao, edicao, exclusao, exportacao
-# e API) exigem login. O login e o do admin, que ja existe e devolve o
-# usuario para a pagina pedida via ?next=.
+# e API) exigem login. A tela de login e a do sistema (registration/login.html),
+# que aceita qualquer usuario ativo -- o /admin/login/ so aceita is_staff.
 # CEP, estabelecimento e health continuam publicos (monitoracao).
-LOGIN_URL = '/admin/login/'
+LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/admin/login/'
+LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 # ==================== INTERNACIONALIZAÇÃO ====================
 LANGUAGE_CODE = 'pt-br'

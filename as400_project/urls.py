@@ -28,6 +28,9 @@ urlpatterns = [
 
     # Logout proprio: o do admin encerra a sessao mas volta para a tela do
     # admin. Este encerra a mesma sessao e devolve para o login (POST, CSRF).
+    # A tela de login e a do sistema (registration/login.html), nao a do admin:
+    # o admin so aceita is_staff, e os usuarios do app nao precisam ser staff.
+    path('accounts/login/', auth_views.LoginView.as_view(), name='login'),
     path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),
 
     # Página inicial agora é a paginada

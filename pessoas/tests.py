@@ -268,6 +268,17 @@ class LoginObrigatorioTests(TestCase):
         self.client.force_login(usuario)
         self.assertEqual(self.client.get(reverse('criar_pessoa')).status_code, 200)
 
+    def test_login_de_usuario_comum_entra_no_sistema(self):
+        # A tela de login e a do sistema (nao a do admin), entao usuario
+        # ativo sem is_staff tambem entra -- caso do usuario 'demo'.
+        User.objects.create_user('teste_comum', password='senha-teste-123')
+        resposta = self.client.post(reverse('login'), {
+            'username': 'teste_comum',
+            'password': 'senha-teste-123',
+        })
+        self.assertEqual(resposta.status_code, 302)
+        self.assertEqual(self.client.get(reverse('criar_pessoa')).status_code, 200)
+
     def test_health_continua_publico(self):
         # Monitoracao (acompanha_flip_dns.sh) nao pode receber 302.
         self.assertEqual(self.client.get(reverse('health')).status_code, 200)
