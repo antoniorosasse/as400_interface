@@ -104,7 +104,7 @@ Este repositório contém **duas partes**:
   `settings.py`, entao `runserver` sem `DEBUG=True` devolve 404 em
   `/static/pessoas/css/sistema.css` (a tabela aparece sem faixa no cabecalho e os
   botoes quebram linha). Para ver o visual local:
-  `DEBUG=True ./env_django/bin/python manage.py runserver 8001`.
+  `DEBUG=True ./venv/bin/python manage.py runserver 8001`.
 - `pessoas/static/pessoas/css/sistema.css` é a mesma folha do `cnpj_interface`
   (tabela densa, cabeçalho discreto, pills suaves, números alinhados) e a
   transformação de tabela em cartões no celular (`.tabela-cards`, via
@@ -125,8 +125,8 @@ Este repositório contém **duas partes**:
 
 ### Django
 
-    python -m venv env_django
-    source env_django/bin/activate
+    python -m venv venv
+    source venv/bin/activate
     pip install -r requirements.txt
     cp .env.example .env            # preencher valores
     (baixar lib/jt400.jar - ver lib/README.md)

@@ -23,8 +23,8 @@ neste workspace. Mantenha-o enxuto e versionado no git.
 
 ## Stack e arquitetura
 
-- Django **6.0.7** (`requirements.txt`), Python 3.13, venv **`env_django`**
-  (nao e `venv`). SQLite (`db.sqlite3`) **so** para o admin.
+- Django **6.0.7** (`requirements.txt`), Python 3.13, venv **`venv`**
+  (ate 17/11/2026 chamava `env_django`). SQLite (`db.sqlite3`) **so** para o admin.
 - Pacote Django: **`as400_project/`**; app unico **`pessoas/`**.
 - Dados de negocio ficam **no DB2 do IBM i remoto** (pub400), biblioteca
   `AROSASSE1`: `PESSOAS` (500.000 linhas, IDs 1.770.681-2.270.680) e `CEPSGEN`.
@@ -46,13 +46,13 @@ neste workspace. Mantenha-o enxuto e versionado no git.
 
 ## Comandos do projeto
 
-    source env_django/bin/activate
+    source venv/bin/activate
     python manage.py runserver 8001          # http://localhost:8001/
-    python manage.py test pessoas            # 8 testes (CSV + cursor), sem AS400
+    python manage.py test pessoas            # 13 testes, sem AS400
     python manage.py check
     time curl -s http://localhost:8001/health/deep/   # 2x: frio ~3-5s, quente ~1,4s
 
-- Use sempre o Python do `env_django/`. Nunca instale pacotes globalmente e nao
+- Use sempre o Python do `venv/`. Nunca instale pacotes globalmente e nao
   altere `requirements.txt` sem pedir.
 - Producao: `cd ~/Projetos && ./deploy.sh as400` (pedir confirmacao).
 
