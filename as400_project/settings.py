@@ -72,6 +72,15 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+# ==================== AUTENTICACAO ====================
+# Telas de pessoas (listagem, detalhe, criacao, edicao, exclusao, exportacao
+# e API) exigem login. O login e o do admin, que ja existe e devolve o
+# usuario para a pagina pedida via ?next=.
+# CEP, estabelecimento e health continuam publicos (monitoracao).
+LOGIN_URL = '/admin/login/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/admin/login/'
+
 # ==================== INTERNACIONALIZAÇÃO ====================
 LANGUAGE_CODE = 'pt-br'
 TIME_ZONE = 'America/Sao_Paulo'

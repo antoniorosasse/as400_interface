@@ -54,6 +54,15 @@
                     </li>
                 </ul>
             </div>
+            {% if user.is_authenticated %}
+            <form method="post" action="{% url 'logout' %}" class="d-flex align-items-center ms-2 mb-0">
+                {% csrf_token %}
+                <span class="navbar-text small me-2 d-none d-lg-inline">{{ user.username }}</span>
+                <button type="submit" class="btn btn-sm btn-outline-light" title="Encerrar a sessao">
+                    <i class="fas fa-right-from-bracket"></i> Sair
+                </button>
+            </form>
+            {% endif %}
             <button type="button" id="btn-tema" class="btn btn-sm btn-outline-light ms-2" aria-label="Alternar tema claro/escuro">
                 <i class="fas fa-moon" id="icone-tema"></i>
             </button>

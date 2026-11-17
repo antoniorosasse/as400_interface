@@ -6,7 +6,10 @@ import csv
 from io import StringIO
 from unittest.mock import patch
 
-from django.test import RequestFactory, SimpleTestCase
+from django.conf import settings
+from django.contrib.auth.models import User
+from django.test import RequestFactory, SimpleTestCase, TestCase
+from django.urls import reverse
 
 from . import views
 
@@ -227,4 +230,52 @@ class ExportarCsvTests(SimpleTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'SQL0901', response.content)
         self.assertTrue(principal.fechado)
+
+
+class LoginObrigatorioTests(TestCase):
+    """Telas de pessoas exigem login; health continua publico.
+
+    Nenhum teste aqui abre conexao com o AS/400: ou o decorator intercepta
+    (302), ou a rota usada nao consulta o banco.
+    """
+
+    ROTAS_PROTEGIDAS = [
+        ('home', None),
+        ('pessoas_paginadas', None),
+        ('exportar_csv', None),
+        ('api_pessoas', None),
+        ('criar_pessoa', None),
+        ('detalhe_pessoa', (1,)),
+        ('editar_pessoa', (1,)),
+        ('excluir_pessoa', (1,)),
+        ('chat_pessoas', None),
+        ('testar_deepseek', None),
+    ]
+
+    def test_rotas_de_pessoas_redirecionam_para_login(self):
+        for nome, args in self.ROTAS_PROTEGIDAS:
+            with self.subTest(rota=nome):
+                resposta = self.client.get(reverse(nome, args=args))
+                self.assertEqual(resposta.status_code, 302)
+                self.assertTrue(
+                    resposta['Location'].startswith(settings.LOGIN_URL),
+                    resposta['Location'],
+                )
+
+    def test_formulario_novo_acessivel_apos_login(self):
+        # /pessoas/novo/ (GET) so renderiza o formulario, sem tocar no AS/400.
+        usuario = User.objects.create_user('teste_login', password='senha-teste-123')
+        self.client.force_login(usuario)
+        self.assertEqual(self.client.get(reverse('criar_pessoa')).status_code, 200)
+
+    def test_health_continua_publico(self):
+        # Monitoracao (acompanha_flip_dns.sh) nao pode receber 302.
+        self.assertEqual(self.client.get(reverse('health')).status_code, 200)
+
+    def test_logout_encerra_a_sessao(self):
+        usuario = User.objects.create_user('teste_saida', password='senha-teste-123')
+        self.client.force_login(usuario)
+        self.assertEqual(self.client.post(reverse('logout')).status_code, 302)
+        self.assertEqual(self.client.get(reverse('home')).status_code, 302)
+        self.assertNotIn('_auth_user_id', self.client.session)
 
