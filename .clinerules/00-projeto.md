@@ -59,11 +59,30 @@ decisoes que nao se reabrem).
 - Cache: `LocMemCache` (300s) + `@cache_page` em `listar_pessoas` (2 min),
   `pessoas_paginadas` (5 min) e `api_pessoas` (10 min).
 
+## Autenticacao (desde 19/11/2026)
+
+- Fonte unica da senha: `auth_user` do **Postgres do `cnpj_interface`**, pelo
+  alias `usuarios` (`USUARIOS_DB_*` no `.env`; role `as400_login` com `SELECT`
+  apenas nessa tabela). Sem alias: modo degradado pelo espelho local.
+- `pessoas/auth_backend.py` (`BackendCnpjPostgres`) e' o **unico** item de
+  `AUTHENTICATION_BACKENDS`; ele espelha o usuario no SQLite (admin/sessao).
+- **Nunca** chamar `User.check_password` contra o alias: o metodo passa um setter
+  e o PBKDF2 regrava o hash "antigo" (`UPDATE auth_user`), o que a role de leitura
+  nega (42501) e o login devolve 500. Use a funcao de modulo
+  `django.contrib.auth.hashers.check_password` (o cnpj roda Django 6.1.1 com
+  1.500.000 iteracoes e este projeto 6.0.7 com 1.200.000: todo hash do cnpj
+  parece antigo).
+- `pessoas/tests.py` dobra o usuario remoto (`_UsuarioRemoto`) e o `save()`
+  levanta de proposito — teste novo que quebrar essa regra deve falhar antes da
+  producao.
+- `context_processors.py` expoe `portfolio_url` (marca e item **Inicio** →
+  portfolio; `PORTFOLIO_URL` no `.env`).
+
 ## Comandos do projeto
 
     source venv/bin/activate
     python manage.py runserver 8001          # http://localhost:8001/
-    python manage.py test pessoas            # 13 testes, sem AS400
+    python manage.py test pessoas            # 24 testes, sem AS400 e sem o Postgres do cnpj
     python manage.py check
     time curl -s http://localhost:8001/health/deep/   # 2x: frio ~3-5s, quente ~1,4s
 
@@ -76,8 +95,10 @@ decisoes que nao se reabrem).
 - A conexao do app com o pub400 e **read-only na pratica**: a cota e de ~140 MB.
   Nunca rodar DDL (`CREATE`/`ALTER`/`DROP`) nem `DELETE`/`UPDATE` em massa.
 - Nunca commitar `.env` nem `lib/jt400.jar`.
-- O app e **publico, sem login** (decisao de portfolio): nao expor CPF completo,
-  telefone ou e-mail em listagem/tabela — apenas no detalhe, como ja e hoje.
+- O app **exige login** desde 19/11/2026 (listagem, detalhe, novo/editar/excluir,
+  export e API). CEP, `estabelecimento/<cep>/` e `health*` continuam publicos.
+- Nao expor CPF completo, telefone ou e-mail em listagem/tabela — apenas no
+  detalhe, como ja e hoje.
 - Proibido criar arquivos de backup manuais (`*.bak`) no repo.
 
 ## Convencoes de implementacao

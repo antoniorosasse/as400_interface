@@ -1,8 +1,9 @@
 # AS/400 Interface
 
 Interface web para consulta e CRUD de pessoas em um IBM i (AS/400) remoto
-(pub400.com), via JDBC. O banco local e **SQLite**, usado só pra sessão e
-admin. Inclui um chat IA que traduz perguntas em linguagem natural para SQL.
+(pub400.com), via JDBC. O banco local e **SQLite** (sessao, admin e espelho dos
+usuarios; a senha e' validada no Postgres do `cnpj_interface`). Inclui um chat IA
+que traduz perguntas em linguagem natural para SQL.
 
 Este repositório contém **duas partes**:
 
@@ -23,6 +24,7 @@ Este repositório contém **duas partes**:
   - [Variáveis de ambiente](#variáveis-de-ambiente)
 - [Endpoints](#endpoints)
 - [Chat IA](#chat-ia)
+- [Autenticação](#autenticação)
 - [Deploy](#deploy)
 - [Ambiente](#ambiente)
 - [Testes](#testes)
@@ -36,7 +38,9 @@ Este repositório contém **duas partes**:
 - Django 6.0.7
 - Python 3.13
 - JPype + jt400.jar (conexão JDBC com AS/400)
-- SQLite (`db.sqlite3`) — apenas sessão, admin e migrations
+- SQLite (`db.sqlite3`) — sessão, admin, migrations e espelho dos usuários
+- PostgreSQL (psycopg2) — **somente leitura** do `auth_user` do `cnpj_interface`,
+  para validar a senha no login (ver [Autenticação](#autenticação))
 - Cache LocMem (`as400-cache`, `TIMEOUT=300`)
 - DeepSeek (chat IA via `openai` SDK)
 - Gunicorn + systemd (produção)
@@ -67,13 +71,15 @@ Este repositório contém **duas partes**:
     |   |   +-- sistema.css        # Linguagem visual comum (tabela, pills, tema)
     |   +-- as400_conn.py           # Conexao JDBC com AS/400
     |   +-- pool.py                 # Conexao unica JDBC (isValid + max_age)
+    |   +-- auth_backend.py         # Login no auth_user do cnpj (role so leitura)
+    |   +-- context_processors.py   # portfolio_url (marca e Inicio)
     |   +-- ceps.py                 # Busca de CEP
     |   +-- chat.py                 # Pipeline do chat IA
     |   +-- contexto.py             # Contexto da conversa
     |   +-- validators.py           # Validacao de CPF, email, etc
     |   +-- models.py               # Vazio: os dados vem do IBM i via JDBC (sem ORM)
     |   +-- admin.py                # Vazio: nenhum model local registrado
-    |   +-- tests.py                # 8 testes automatizados do export CSV
+    |   +-- tests.py                # 24 testes: export CSV + autenticacao
     |   +-- views.py                # Views (1100+ linhas)
     +-- ceps-api/                   # Projeto Java (Spring Boot)
     |   +-- src/
@@ -169,11 +175,18 @@ Ver `.env.example`. As principais:
 - `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS` — Django padrão
 - `AS400_HOST`, `AS400_USER`, `AS400_PASSWORD`, `AS400_LIBRARY` — IBM i
 - `DEEPSEEK_API_KEY` — chave da API do chat
+- `USUARIOS_DB_NAME`, `USUARIOS_DB_USER`, `USUARIOS_DB_PASSWORD`,
+  `USUARIOS_DB_HOST`, `USUARIOS_DB_PORT` — Postgres do `cnpj_interface`
+  (`auth_user`). Sem `USUARIOS_DB_NAME` o login cai no espelho local
+- `PORTFOLIO_URL` — destino da marca e do item **Início**; vazio usa o padrão por
+  ambiente (dev `http://<host>:8000/menu/`, produção o portfólio)
 
 ## Endpoints
 
 | Método | URL | O que faz |
 |---|---|---|
+| GET | `/accounts/login/` | Tela de login (a senha é a do `cnpj_interface`) |
+| POST | `/accounts/logout/` | Encerra a sessão e volta para o login |
 | GET | `/` | Home: lista paginada de pessoas (mesma view de `/pessoas/paginadas/`) |
 | GET | `/pessoas/` | Redireciona (302) para `/pessoas/paginadas/` |
 | GET | `/pessoas/paginadas/` | Lista com filtros avançados |
@@ -191,6 +204,10 @@ Ver `.env.example`. As principais:
 | GET | `/health/` | Health check leve |
 | GET | `/health/deep/` | Health check profundo (testa AS/400) |
 
+> **Exigem login:** `/`, `/pessoas/*`, `/api/pessoas/`, `/chat-pessoas/` e
+> `/testar-deepseek/`. **Públicos:** `/buscar-cep/`, `/lista-ceps/`,
+> `/estabelecimento/<cep>/` e `/health*`.
+
 ## Chat IA
 
 O pipeline do chat:
@@ -207,6 +224,32 @@ Arquivos:
   extraídas via IA)
 - DeepSeek via `openai` SDK apontando para `https://api.deepseek.com/v1`
 
+## Autenticação
+
+Não existe usuário próprio neste projeto: **a senha é a do `cnpj_interface`**
+(`auth_user` do Postgres dele). O SQLite daqui guarda sessão, admin e um espelho
+do usuário (hash, e-mail, nome, flags), atualizado a cada login.
+
+- `pessoas/auth_backend.py` → `BackendCnpjPostgres` é o **único** item de
+  `AUTHENTICATION_BACKENDS`: busca o usuário pelo alias `usuarios`
+  (`USUARIOS_DB_*`), confere a senha com
+  `django.contrib.auth.hashers.check_password` e espelha o resultado no SQLite.
+  O `ModelBackend` puro não entra na lista — com ele, uma senha antiga do espelho
+  continuaria entrando depois de a senha ser trocada no cnpj.
+- O Postgres é lido por uma role **somente `SELECT`** em `auth_user`
+  (`as400_login`). Quem tentar escrever recebe `42501`.
+- **Não use `User.check_password` contra o alias.** O método passa um *setter* e o
+  PBKDF2 regrava o hash quando ele está abaixo do custo do Django atual. Como o
+  `cnpj_interface` roda Django 6.1.1 (1.500.000 iterações) e este projeto 6.0.7
+  (1.200.000), **todo** hash do cnpj parece antigo → `UPDATE auth_user` → negado
+  pela role → **500** no login. Use a função de módulo (`hashers.check_password`),
+  que só faz a conta.
+- Modo degradado: sem `USUARIOS_DB_NAME` (dev sem Postgres) ou com o Postgres
+  fora do ar (`DatabaseError`), o login valida pelo espelho local e registra um
+  warning. Durante `manage.py test` o alias nem é criado (`RODANDO_TESTES`).
+- Trocar senha é no `cnpj_interface`:
+  `cd ~/cnpj_interface && venv/bin/python manage.py changepassword <usuario>`.
+
 ## Deploy
 
 Na máquina NoteNeto:
@@ -220,13 +263,16 @@ Na máquina NoteNeto:
 
 ## Testes
 
-Suíte automatizada do app `pessoas` (**8 testes**, todos `SimpleTestCase`):
+Suíte automatizada do app `pessoas` (**24 testes**, todos `SimpleTestCase`):
 
     python manage.py test pessoas
 
-Eles cobrem o export CSV: streaming UTF-8, fechamento de `ResultSet`/`Statement`
-em erro de SQL e em download abortado pelo cliente. O pool JDBC e mockado —
-nenhum teste toca no AS/400 real.
+Eles cobrem o export CSV (streaming UTF-8, fechamento de `ResultSet`/`Statement`
+em erro de SQL e em download abortado pelo cliente) e a autenticação (usuário
+remoto, senha errada, usuário inexistente, espelho, alias ausente e
+`DatabaseError`, além do caso de hash antigo autenticar **sem** escrever no
+cnpj). O pool JDBC e o Postgres do cnpj são mockados — nenhum teste toca o
+AS/400 real nem o banco de usuários.
 
 Os arquivos `teste_*.py` na raiz são scripts **manuais** de teste de conexão com
 o AS/400 usando diferentes bibliotecas (ibm_db, JayDeBeApi, JPype, jt400).
