@@ -29,7 +29,8 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
-            <a class="navbar-brand" href="{% url 'home' %}">
+            <a class="navbar-brand" href="{{ portfolio_url }}"
+               title="Portfolio de projetos (arosasse.tec.br)">
                 <i class="fas fa-database"></i> AS/400 Interface
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -38,8 +39,14 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}" href="{% url 'home' %}">
-                            <i class="fas fa-table"></i> Início
+                        <a class="nav-link" href="{{ portfolio_url }}"
+                           title="Portfolio de projetos (arosasse.tec.br)">
+                            <i class="fas fa-house"></i> Início
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'pessoas_paginadas' %}active{% endif %}" href="{% url 'home' %}">
+                            <i class="fas fa-table"></i> Pessoas
                         </a>
                     </li>
                     <li class="nav-item">

@@ -7,11 +7,14 @@ from io import StringIO
 from unittest.mock import patch
 
 from django.conf import settings
+from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.models import User
-from django.test import RequestFactory, SimpleTestCase, TestCase
+from django.db import DatabaseError
+from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 
-from . import views
+from . import auth_backend, views
+from .context_processors import url_portfolio
 
 
 class _FakeMetaData:
@@ -289,4 +292,117 @@ class LoginObrigatorioTests(TestCase):
         self.assertEqual(self.client.post(reverse('logout')).status_code, 302)
         self.assertEqual(self.client.get(reverse('home')).status_code, 302)
         self.assertNotIn('_auth_user_id', self.client.session)
+
+
+class _UsuarioRemoto:
+    """Duble do User vindo do Postgres do cnpj_interface."""
+
+    def __init__(self, username='remoto', senha='senha-certa',
+                 is_active=True, is_staff=False, is_superuser=False):
+        self.username = username
+        self.password = make_password(senha)
+        self.email = f'{username}@exemplo.test'
+        self.first_name = 'Nome'
+        self.last_name = 'Remoto'
+        self.is_active = is_active
+        self.is_staff = is_staff
+        self.is_superuser = is_superuser
+
+    def check_password(self, senha):
+        return check_password(senha, self.password)
+
+
+class BackendCnpjPostgresTests(TestCase):
+    """Login valida no cnpj_interface e espelha o usuario no sqlite local."""
+
+    def setUp(self):
+        # Nos testes o alias "usuarios" nao e' criado (settings.RODANDO_TESTES),
+        # entao sem este patch o backend cairia direto no espelho local.
+        patcher = patch('pessoas.auth_backend.alias_disponivel', return_value=True)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _autenticar(self, username, senha):
+        return auth_backend.BackendCnpjPostgres().authenticate(
+            None, username=username, password=senha
+        )
+
+    def test_senha_do_cnpj_autentica_e_espelha_o_usuario(self):
+        remoto = _UsuarioRemoto('neto', 'senha-certa', is_staff=True, is_superuser=True)
+        with patch('pessoas.auth_backend.buscar_usuario_remoto', return_value=remoto):
+            local = self._autenticar('neto', 'senha-certa')
+
+        self.assertIsNotNone(local)
+        self.assertEqual(local.username, 'neto')
+        self.assertTrue(local.is_staff)
+        self.assertTrue(local.is_superuser)
+        self.assertEqual(local.email, 'neto@exemplo.test')
+        # o hash veio junto: o espelho aceita a mesma senha (modo degradado)
+        self.assertTrue(User.objects.get(username='neto').check_password('senha-certa'))
+
+    def test_senha_errada_no_cnpj_nao_entra_mesmo_com_espelho_valido(self):
+        # Senha trocada no cnpj: o espelho local nao pode continuar aceitando
+        # a senha antiga.
+        User.objects.create_user('neto', password='senha-antiga')
+        remoto = _UsuarioRemoto('neto', 'senha-nova')
+        with patch('pessoas.auth_backend.buscar_usuario_remoto', return_value=remoto):
+            self.assertIsNone(self._autenticar('neto', 'senha-antiga'))
+
+    def test_usuario_inexistente_no_cnpj_e_negado(self):
+        User.objects.create_user('fantasma', password='senha-teste-123')
+        with patch('pessoas.auth_backend.buscar_usuario_remoto', return_value=None):
+            self.assertIsNone(self._autenticar('fantasma', 'senha-teste-123'))
+
+    def test_usuario_inativo_no_cnpj_e_negado(self):
+        remoto = _UsuarioRemoto('bloqueado', 'senha-certa', is_active=False)
+        with patch('pessoas.auth_backend.buscar_usuario_remoto', return_value=remoto):
+            self.assertIsNone(self._autenticar('bloqueado', 'senha-certa'))
+
+    def test_postgres_fora_do_ar_cai_no_espelho_local(self):
+        User.objects.create_user('neto', password='senha-teste-123')
+        with patch('pessoas.auth_backend.buscar_usuario_remoto',
+                   side_effect=DatabaseError('fora do ar')):
+            local = self._autenticar('neto', 'senha-teste-123')
+
+        self.assertIsNotNone(local)
+        self.assertEqual(local.username, 'neto')
+
+    def test_sem_alias_configurado_usa_o_espelho_local(self):
+        User.objects.create_user('local', password='senha-teste-123')
+        with patch('pessoas.auth_backend.alias_disponivel', return_value=False):
+            local = self._autenticar('local', 'senha-teste-123')
+
+        self.assertIsNotNone(local)
+        self.assertEqual(local.username, 'local')
+
+
+class LinksDoSiteTests(TestCase):
+    """Marca e item Inicio levam ao portfolio; a lista de pessoas fica em Pessoas."""
+
+    @override_settings(PORTFOLIO_URL='', DEBUG=False)
+    def test_url_portfolio_padrao_de_producao(self):
+        self.assertEqual(url_portfolio(), 'https://arosasse.tec.br/')
+
+    @override_settings(PORTFOLIO_URL='https://exemplo.test/pt/', DEBUG=False)
+    def test_url_portfolio_vem_do_env(self):
+        self.assertEqual(url_portfolio(), 'https://exemplo.test/pt/')
+
+    @override_settings(PORTFOLIO_URL='', DEBUG=True)
+    def test_url_portfolio_no_dev_usa_o_menu_na_8000(self):
+        requisicao = RequestFactory().get('/', HTTP_HOST='localhost:8001')
+        self.assertEqual(url_portfolio(requisicao), 'http://localhost:8000/menu/')
+
+    @override_settings(PORTFOLIO_URL='', DEBUG=False)
+    def test_nav_do_base_leva_ao_portfolio_e_tem_item_pessoas(self):
+        usuario = User.objects.create_user('teste_nav', password='senha-teste-123')
+        self.client.force_login(usuario)
+        html = self.client.get(reverse('criar_pessoa')).content.decode()
+
+        # marca + item Inicio
+        self.assertEqual(html.count('href="https://arosasse.tec.br/"'), 2)
+        self.assertIn('> Início', html)
+        # a lista de pessoas continua no menu, agora como "Pessoas"
+        self.assertIn(f'href="{reverse("home")}"', html)
+        self.assertIn('> Pessoas', html)
+
 

@@ -1,5 +1,6 @@
 # Django settings for as400_project project.
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -49,6 +50,9 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                # Portfolio (arosasse.tec.br): usado pela marca e pelo item
+                # Inicio de pessoas/base.html.
+                'pessoas.context_processors.links_do_site',
             ],
         },
     },
@@ -63,6 +67,40 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# ==================== BANCO DE USUARIOS (cnpj_interface) ====================
+# Fonte unica da senha: auth_user do Postgres do cnpj_interface. O sqlite
+# local continua guardando sessao, admin log e o espelho dos usuarios (User),
+# para o admin e as permissoes seguirem funcionando. A validacao e' feita por
+# pessoas/auth_backend.py, que so' LE o Postgres (role com SELECT em auth_user).
+#
+# Sem USUARIOS_DB_NAME o alias nao existe e o login usa so' o espelho local
+# (modo degradado: dev sem Postgres, ou servidor ainda sem a variavel).
+USUARIOS_DB_NAME = os.getenv('USUARIOS_DB_NAME', '').strip()
+
+# Durante `manage.py test` o alias nao e' criado: os testes nao devem tocar no
+# Postgres (o backend e' mockado) e o runner nao cria banco de teste extra.
+RODANDO_TESTES = 'test' in sys.argv
+
+if USUARIOS_DB_NAME and not RODANDO_TESTES:
+    DATABASES['usuarios'] = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': USUARIOS_DB_NAME,
+        'USER': os.getenv('USUARIOS_DB_USER', ''),
+        'PASSWORD': os.getenv('USUARIOS_DB_PASSWORD', ''),
+        'HOST': os.getenv('USUARIOS_DB_HOST', 'localhost'),
+        'PORT': os.getenv('USUARIOS_DB_PORT', '5432'),
+        # Falha rapido: Postgres fora do ar cai no espelho local sem travar.
+        'OPTIONS': {'connect_timeout': 4},
+    }
+
+AUTHENTICATION_BACKENDS = [
+    # ModelBackend por baixo (permissoes do admin); authenticate() sobrescrito
+    # para validar no cnpj_interface. O ModelBackend "puro" nao entra na lista:
+    # com ele, uma senha antiga do espelho local continuaria entrando depois de
+    # a senha ser trocada no cnpj.
+    'pessoas.auth_backend.BackendCnpjPostgres',
+]
 
 # ==================== VALIDAÇÃO DE SENHA ====================
 AUTH_PASSWORD_VALIDATORS = [
@@ -80,6 +118,13 @@ AUTH_PASSWORD_VALIDATORS = [
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
+
+# ==================== LINKS DO SITE ====================
+# A marca e o item "Inicio" do menu levam ao portfolio (arosasse.tec.br); a
+# lista de pessoas continua no item "Pessoas" (home). Vazio = padrao por
+# ambiente, resolvido em pessoas/context_processors.py: dev
+# http://<host>:8000/menu/ e producao https://arosasse.tec.br/.
+PORTFOLIO_URL = os.getenv('PORTFOLIO_URL', '').strip()
 
 # ==================== INTERNACIONALIZAÇÃO ====================
 LANGUAGE_CODE = 'pt-br'
