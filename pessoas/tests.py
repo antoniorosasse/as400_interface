@@ -7,7 +7,7 @@ from io import StringIO
 from unittest.mock import patch
 
 from django.conf import settings
-from django.contrib.auth.hashers import check_password, make_password
+from django.contrib.auth.hashers import PBKDF2PasswordHasher, check_password, make_password
 from django.contrib.auth.models import User
 from django.db import DatabaseError
 from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
@@ -294,13 +294,23 @@ class LoginObrigatorioTests(TestCase):
         self.assertNotIn('_auth_user_id', self.client.session)
 
 
+def _hash(senha, iteracoes=None):
+    """Hash pbkdf2_sha256. Com `iteracoes`, simula um hash antigo do cnpj."""
+    if iteracoes is None:
+        return make_password(senha)
+    hasher = PBKDF2PasswordHasher()
+    hasher.iterations = iteracoes
+    return hasher.encode(senha, hasher.salt())
+
+
 class _UsuarioRemoto:
     """Duble do User vindo do Postgres do cnpj_interface."""
 
     def __init__(self, username='remoto', senha='senha-certa',
-                 is_active=True, is_staff=False, is_superuser=False):
+                 is_active=True, is_staff=False, is_superuser=False,
+                 iteracoes=None):
         self.username = username
-        self.password = make_password(senha)
+        self.password = _hash(senha, iteracoes)
         self.email = f'{username}@exemplo.test'
         self.first_name = 'Nome'
         self.last_name = 'Remoto'
@@ -309,7 +319,19 @@ class _UsuarioRemoto:
         self.is_superuser = is_superuser
 
     def check_password(self, senha):
-        return check_password(senha, self.password)
+        # Reproduz o User.check_password do Django: quando o hash esta'
+        # desatualizado ele chama o setter, que regrava a senha (UPDATE).
+        def setter(nova_senha):
+            self.save(update_fields=['password'])
+
+        return check_password(senha, self.password, setter)
+
+    def save(self, **kwargs):
+        # O role do cnpj so' tem SELECT: qualquer escrita aqui e' o bug que
+        # derrubava o login com 500 (permission denied for table auth_user).
+        raise AssertionError(
+            'tentativa de gravar no auth_user do cnpj (role somente leitura)'
+        )
 
 
 class BackendCnpjPostgresTests(TestCase):
@@ -347,6 +369,19 @@ class BackendCnpjPostgresTests(TestCase):
         remoto = _UsuarioRemoto('neto', 'senha-nova')
         with patch('pessoas.auth_backend.buscar_usuario_remoto', return_value=remoto):
             self.assertIsNone(self._autenticar('neto', 'senha-antiga'))
+
+    def test_hash_antigo_autentica_sem_escrever_no_cnpj(self):
+        # Hash com iteracoes antigas: o User.check_password do Django chamaria
+        # o setter e tentaria UPDATE em auth_user (role so' leitura = 500).
+        # Aqui o login tem que passar sem nenhuma escrita no banco do cnpj.
+        remoto = _UsuarioRemoto('demo', 'senha-certa', iteracoes=1000)
+        with patch('pessoas.auth_backend.buscar_usuario_remoto', return_value=remoto):
+            local = self._autenticar('demo', 'senha-certa')
+
+        self.assertIsNotNone(local)
+        self.assertEqual(local.username, 'demo')
+        # o espelho local guardou o hash como veio do cnpj
+        self.assertEqual(User.objects.get(username='demo').password, remoto.password)
 
     def test_usuario_inexistente_no_cnpj_e_negado(self):
         User.objects.create_user('fantasma', password='senha-teste-123')

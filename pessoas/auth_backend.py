@@ -12,7 +12,11 @@ variaveis USUARIOS_DB_* do .env). A cada login:
 
   1. busca o usuario em auth_user do cnpj (somente leitura);
   2. confere a senha com o hash de la' (check_password: e' so' matematica de
-     hash, nao precisa de senha do banco nem de permissao de escrita);
+     hash, nao precisa de senha do banco nem de permissao de escrita). A
+     conferencia NAO usa User.check_password: aquele metodo passa um setter
+     que regrava o hash quando ele esta' desatualizado (UPDATE em auth_user)
+     e o role do cnpj so' tem SELECT -- dava ProgrammingError e 500 no login
+     de quem tinha hash antigo. Aqui usa-se a funcao de modulo, sem setter;
   3. se bater, espelha o usuario no sqlite local (hash, e-mail, nome e flags),
      para o admin, as permissoes e as sessoes continuarem funcionando.
 
@@ -31,6 +35,7 @@ import logging
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.backends import ModelBackend
+from django.contrib.auth.hashers import check_password as verificar_senha
 from django.db import DatabaseError
 
 logger = logging.getLogger(__name__)
@@ -108,7 +113,9 @@ class BackendCnpjPostgres(ModelBackend):
         if remoto is None:
             logger.info('Login negado: "%s" nao existe no banco de usuarios.', username)
             return None
-        if not self.user_can_authenticate(remoto) or not remoto.check_password(password):
+        if not self.user_can_authenticate(remoto) or not verificar_senha(
+            password, remoto.password
+        ):
             logger.info('Login negado: senha invalida para "%s".', username)
             return None
 
